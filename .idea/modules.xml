@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/CA1.iml" filepath="$PROJECT_DIR$/CA1.iml" />
+      <module fileurl="file://$PROJECT_DIR$/yapl-mj-compiler.iml" filepath="$PROJECT_DIR$/yapl-mj-compiler.iml" />
     </modules>
   </component>
 </project>
