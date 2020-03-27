@@ -5,8 +5,10 @@ import yapl.interfaces.MemoryRegion;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.util.*;
+
+import static yapl.impl.BackendMJ.Instruction.*;
+import static yapl.impl.BackendMJ.OperandType.*;
 
 /**
  * Implementation of CA1
@@ -15,7 +17,76 @@ import java.util.*;
  */
 public class BackendMJ implements BackendBinSM {
 
-    enum Command {
+    private static final byte ZERO = 0;
+
+    private List<Byte> codeBuffer = new LinkedList<>();
+    private List<Byte> staticDataBuffer = new LinkedList<>();
+
+    private Map<String, Integer> codeAddressForLabels = new HashMap<>();
+    private Map<String, List<Integer>> backpatchingAddressesForLabels = new HashMap<>();
+
+    int getCurrentCodeAddress() {
+        return codeBuffer.size();
+    }
+
+    void addInstructionToCodeBufferLol(Instruction instruction) {
+        codeBuffer.add(instruction.value);
+    }
+
+    void addToBackpatchingMap(String label, Integer address) {
+        List<Integer> list = backpatchingAddressesForLabels.getOrDefault(label, new LinkedList<>());
+        list.add(address);
+        backpatchingAddressesForLabels.put(label, list);
+    }
+
+    /**
+     * Writes an explicit operand to the code buffer.
+     * <p>
+     * Depending on the operand type, crops the operand into format.
+     * Adding 0xF0F1F2F3 will result in: 0xF0 0xF1 0xF2 0xF3 for s32,
+     * 0xF2, 0xF3 for s16 and 0xF3 for s8.
+     *
+     * @param operand the explicit operand
+     * @param type    the type/size of the operand
+     */
+    void addExplicitOperandToCodeBuffer(int operand, OperandType type) {
+        byte[] bytes = ByteUtils.intToBytes(operand);
+        switch (type) {
+            case s32:
+                codeBuffer.add(bytes[0]);
+                codeBuffer.add(bytes[1]);
+            case s16:
+                codeBuffer.add(bytes[2]);
+            case s8:
+                codeBuffer.add(bytes[3]);
+        }
+    }
+
+    void addExplicitOperandToCodeBuffer(int operand) {
+        addExplicitOperandToCodeBuffer(operand, s32);
+    }
+
+    void addExplicitOperandToCodeBuffer(short operand) {
+        addExplicitOperandToCodeBuffer(operand, s16);
+    }
+
+    void addExplicitOperandToCodeBuffer(byte operand) {
+        addExplicitOperandToCodeBuffer(operand, s8);
+    }
+
+    enum OperandType {
+        s8(1),
+        s16(2),
+        s32(4);
+
+        int size;
+
+        OperandType(int size) {
+            this.size = size;
+        }
+    }
+
+    enum Instruction {
         load(1),
         load0(2),
         load1(3),
@@ -75,18 +146,10 @@ public class BackendMJ implements BackendBinSM {
 
         byte value;
 
-        Command(int value) {
+        Instruction(int value) {
             this.value = (byte) value;
         }
     }
-
-    private static final byte ZERO = 0;
-
-    private List<Byte> codeBuffer = new LinkedList<>();
-    private List<Byte> staticDataBuffer = new LinkedList<>();
-
-    private Map<String, Integer> codeAddressForLabels = new HashMap<>();
-    private Map<String, List<Integer>> backpatchingAddressesForLabels = new HashMap<>();
 
     @Override
     public int wordSize() {
@@ -152,10 +215,8 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void loadConst(int value) {
-        codeBuffer.add(Command.const_.value);
-
-        for (byte b : ByteUtils.intToBytes(value))
-            codeBuffer.add(b);
+        addInstructionToCodeBufferLol(const_);
+        addExplicitOperandToCodeBuffer(value);
     }
 
     @Override
@@ -195,37 +256,37 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void neg() {
-        codeBuffer.add(Command.neg.value);
+        addInstructionToCodeBufferLol(neg);
     }
 
     @Override
     public void add() {
-        codeBuffer.add(Command.add.value);
+        addInstructionToCodeBufferLol(add);
     }
 
     @Override
     public void sub() {
-        codeBuffer.add(Command.sub.value);
+        addInstructionToCodeBufferLol(sub);
     }
 
     @Override
     public void mul() {
-        codeBuffer.add(Command.mul.value);
+        addInstructionToCodeBufferLol(mul);
     }
 
     @Override
     public void div() {
-        codeBuffer.add(Command.div.value);
+        addInstructionToCodeBufferLol(div);
     }
 
     @Override
     public void mod() {
-        codeBuffer.add(Command.rem.value);
+        addInstructionToCodeBufferLol(rem);
     }
 
     @Override
     public void and() {
-        codeBuffer.add(Command.mul.value);
+        addInstructionToCodeBufferLol(mul);
     }
 
     @Override
@@ -265,7 +326,9 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void jump(String label) {
-
+        addInstructionToCodeBufferLol(jmp);
+        addToBackpatchingMap(label, getCurrentCodeAddress());
+        addExplicitOperandToCodeBuffer(0, s16);
     }
 
     @Override
