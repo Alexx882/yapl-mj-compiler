@@ -25,7 +25,7 @@ public class BackendMJ implements BackendBinSM {
     private Map<String, Integer> codeAddressForLabels = new HashMap<>();
     private Map<String, List<Integer>> backpatchingAddressesForLabels = new HashMap<>();
 
-    int getCurrentCodeAddress() {
+    int getNextCodeBufferAdress() {
         return codeBuffer.size();
     }
 
@@ -72,6 +72,21 @@ public class BackendMJ implements BackendBinSM {
 
     void addExplicitOperandToCodeBuffer(byte operand) {
         addExplicitOperandToCodeBuffer(operand, s8);
+    }
+
+    /**
+     * adds nBytes null-bytes as placeholders to the code buffer (for later backpatching)
+     *
+     * @param nBytes - number of placeholder bytes needed
+     * @return the position of the FIRST placeholder byte
+     */
+    int addPlaceholderByteToCodeBuffer(int nBytes) {
+        int startOfArea = getNextCodeBufferAdress();
+
+        for (int i = 0; i < nBytes; i++)
+            codeBuffer.add(null);
+
+        return startOfArea;
     }
 
     enum OperandType {
@@ -163,7 +178,8 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void assignLabel(String label) {
-
+        int currentAdress = codeBuffer.size();
+        codeAddressForLabels.put(label, currentAdress);
     }
 
     @Override
@@ -193,10 +209,45 @@ public class BackendMJ implements BackendBinSM {
         return sizeBeforeNewString;
     }
 
+    private Procedure currentlyDefinedProcedure;
+
+    @Override
+    public void enterProc(String label, int nParams, boolean main) {
+        if (currentlyDefinedProcedure != null)
+            throw new IllegalStateException("Sub-Procedures are not allowed.");
+
+        // mark start of method with label provided
+        assignLabel(label);
+
+        // add opcode for 'enter' to the codebuffer
+        this.addInstructionToCodeBufferLol(enter);
+
+        // add number of arguments (s8 value) to the codebuffer
+        this.addExplicitOperandToCodeBuffer((byte) nParams);
+
+        int backPatchLocation = addPlaceholderByteToCodeBuffer(1);
+
+        currentlyDefinedProcedure = new Procedure(label, nParams, backPatchLocation);
+    }
+
+    /**
+     * called to allocate local variables inside procedures
+     *
+     * @param words    number of words to allocate.
+     *
+     * @return
+     */
     @Override
     public int allocStack(int words) {
         return 0;
     }
+
+    @Override
+    public void exitProc(String label) {
+
+    }
+
+
 
     @Override
     public void allocHeap(int words) {
@@ -327,22 +378,12 @@ public class BackendMJ implements BackendBinSM {
     @Override
     public void jump(String label) {
         addInstructionToCodeBufferLol(jmp);
-        addToBackpatchingMap(label, getCurrentCodeAddress());
+        addToBackpatchingMap(label, getNextCodeBufferAdress());
         addExplicitOperandToCodeBuffer(0, s16);
     }
 
     @Override
     public void callProc(String label) {
-
-    }
-
-    @Override
-    public void enterProc(String label, int nParams, boolean main) {
-
-    }
-
-    @Override
-    public void exitProc(String label) {
 
     }
 
