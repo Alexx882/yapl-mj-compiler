@@ -233,20 +233,51 @@ public class BackendMJ implements BackendBinSM {
     /**
      * called to allocate local variables inside procedures
      *
-     * @param words    number of words to allocate.
-     *
+     * @param words number of words to allocate.
      * @return
      */
     @Override
     public int allocStack(int words) {
-        return 0;
+        if (currentlyDefinedProcedure == null)
+            throw new IllegalStateException("Cannot allocate variables without a procedure.");
+
+        return currentlyDefinedProcedure.allocStackVariable(words);
+    }
+
+    private void backpatch(int location, byte[] bytes) {
+        for (int i = 0; i < bytes.length; i++) {
+            if (codeBuffer.get(location) != null)
+                throw new IllegalStateException(String.format("Codebuffer has no placeholder at location %d", location + i));
+
+            codeBuffer.set(location, bytes[i]);
+        }
+    }
+
+    private void backpatch(int location, byte value) {
+        backpatch(location, new byte[]{value});
+    }
+
+    private void backpatch(int location, short value) {
+        backpatch(location, ByteUtils.numberAsBytes(value));
+    }
+
+    private void backpatch(int location, int value) {
+        backpatch(location, ByteUtils.numberAsBytes(value));
     }
 
     @Override
     public void exitProc(String label) {
+        // backpatch framesize (which we now know because all variables were declared and we know their size)
+        backpatch(currentlyDefinedProcedure.backPatchLocation(), currentlyDefinedProcedure.frameSize());
 
+        // mark teardown with provided label
+        assignLabel(label);
+
+        // write opcode for EXIT to codebuffer
+        addInstructionToCodeBufferLol(exit);
+
+        currentlyDefinedProcedure = null;
     }
-
 
 
     @Override
