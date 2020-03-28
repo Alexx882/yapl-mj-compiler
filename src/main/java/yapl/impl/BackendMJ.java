@@ -33,6 +33,10 @@ public class BackendMJ implements BackendBinSM {
         codeBuffer.add(instruction.value);
     }
 
+    void addToBackpatchingMap(String label) {
+        addToBackpatchingMap(label, getNextCodeBufferAdress());
+    }
+
     void addToBackpatchingMap(String label, Integer address) {
         List<Integer> list = backpatchingAddressesForLabels.getOrDefault(label, new LinkedList<>());
         list.add(address);
@@ -178,8 +182,7 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void assignLabel(String label) {
-        int currentAdress = codeBuffer.size();
-        codeAddressForLabels.put(label, currentAdress);
+        codeAddressForLabels.put(label, getNextCodeBufferAdress());
     }
 
     @Override
@@ -233,8 +236,7 @@ public class BackendMJ implements BackendBinSM {
     /**
      * called to allocate local variables inside procedures
      *
-     * @param words    number of words to allocate.
-     *
+     * @param words number of words to allocate.
      * @return
      */
     @Override
@@ -246,7 +248,6 @@ public class BackendMJ implements BackendBinSM {
     public void exitProc(String label) {
 
     }
-
 
 
     @Override
@@ -342,44 +343,99 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void or() {
-
+        // a + b >= 1
+        add();
+        loadConst(1);
+        isGreaterOrEqual();
     }
 
     @Override
     public void isEqual() {
-
+        compare(jeq);
     }
 
     @Override
     public void isLess() {
-
+        compare(jlt);
     }
 
     @Override
     public void isLessOrEqual() {
-
+        compare(jle);
     }
 
     @Override
     public void isGreater() {
-
+        compare(jgt);
     }
 
     @Override
     public void isGreaterOrEqual() {
+        compare(jeq);
+    }
 
+    /**
+     * Build comparison evaluation from conditional jump instruction.
+     * <p>
+     * b = pop(); a = pop()
+     * push(a ~ b)
+     *
+     * @param operator
+     */
+    void compare(Instruction operator) {
+        int ifAddress = getNextCodeBufferAdress();
+
+        // if condition is true, jump ifLabel
+        addInstructionToCodeBufferLol(operator);
+        addExplicitOperandToCodeBuffer(ifAddress + 7);
+
+        // push false
+        loadConst(boolValue(false));
+
+        // jump endIfLabel
+        jump(ifAddress + 8);
+
+        // ifLabel
+
+        // push true
+        loadConst(boolValue(true));
+
+        // endIfLabel
     }
 
     @Override
     public void branchIf(boolean value, String label) {
-
+        loadConst(boolValue(value));
+        addInstructionToCodeBufferLol(jeq);
+        addToBackpatchingMap(label);
+        addPlaceholderByteToCodeBuffer(2);
     }
 
     @Override
     public void jump(String label) {
+        int backpatchingTarget = jump(0);
+        addToBackpatchingMap(label, backpatchingTarget);
+    }
+
+    /**
+     * Unconditional jump to absolute address.
+     * <p>
+     * If address is 0, the operand will be filled with placeholders.
+     *
+     * @param address the jump target
+     * @return address of the FIRST byte of the jump target
+     */
+    public int jump(int address) {
         addInstructionToCodeBufferLol(jmp);
-        addToBackpatchingMap(label, getNextCodeBufferAdress());
-        addExplicitOperandToCodeBuffer(0, s16);
+        int backpatchingTarget = getNextCodeBufferAdress();
+
+        if (address == 0) {
+            addPlaceholderByteToCodeBuffer(2);
+        } else {
+            addExplicitOperandToCodeBuffer(address, s16);
+        }
+
+        return backpatchingTarget;
     }
 
     @Override
