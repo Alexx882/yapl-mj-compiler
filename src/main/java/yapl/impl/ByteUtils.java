@@ -23,7 +23,7 @@ public class ByteUtils {
 
     public static byte[] numberAsBytesArray(short i) {
         ByteBuffer bb = ByteBuffer.allocate(2);
-        bb.putInt(i);
+        bb.putShort(i);
         return bb.array();
     }
 
