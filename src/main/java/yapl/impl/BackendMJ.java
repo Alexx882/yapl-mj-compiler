@@ -135,13 +135,16 @@ public class BackendMJ implements BackendBinSM {
     public void writeObjectFile(OutputStream outStream) throws IOException {
         LinkedList<Byte> header = new LinkedList<>();
 
+        // magic bytes 'MJ'
         header.add((byte) 0x4D);
         header.add((byte) 0x4A);
 
+        // codeSize: number of bytes in code area
         header.addAll(ByteUtils.numberAsBytes(codeBuffer.size()));
-        header.addAll(ByteUtils.numberAsBytes(staticDataBuffer.size()));
-        // TODO change to call main()
-        header.addAll(ByteUtils.numberAsBytes(0));
+        // (static) dataSize: number of ints (32 bits) in static data area
+        header.addAll(ByteUtils.numberAsBytes(staticDataBuffer.size() / 4));
+        // startPC: main() or start of code area if there is no main
+        header.addAll(ByteUtils.numberAsBytes(codeAddressForLabels.getOrDefault("main", 0)));
 
         for (Byte b : header)
             outStream.write(b);
@@ -157,7 +160,7 @@ public class BackendMJ implements BackendBinSM {
     public int allocStaticData(int words) {
         int sizeBeforeNewString = staticDataBuffer.size();
 
-        for (int i = 0; i < words; ++i)
+        for (int i = 0; i < words * 4; ++i)
             staticDataBuffer.add(ZERO);
 
         return sizeBeforeNewString;
@@ -165,12 +168,16 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public int allocStringConstant(String string) {
-        int sizeBeforeNewString = staticDataBuffer.size();
+        int sizeBeforeNewString = staticDataBuffer.size() / 4;
 
         for (char c : string.toCharArray())
             staticDataBuffer.add((byte) c);
 
         staticDataBuffer.add((byte) '\0');
+
+        int paddingSize = (4 - (staticDataBuffer.size() % 4)) % 4;
+        for (int i = 0; i < paddingSize; i++)
+            staticDataBuffer.add((byte) 0);
 
         return sizeBeforeNewString;
     }
@@ -241,6 +248,7 @@ public class BackendMJ implements BackendBinSM {
 
         // write opcode for EXIT to codebuffer
         addInstructionToCodeBufferLol(exit);
+        addInstructionToCodeBufferLol(return_);
 
         currentlyDefinedProcedure = null;
     }
@@ -323,12 +331,44 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void writeInteger() {
+        // print: print integer t1 to standard output stream, right-adjusted in a field of t0 blank characters
+        // insert t0
+        loadConst(0);
+        addInstructionToCodeBufferLol(print);
+    }
 
+    /**
+     * Seems to print a single ASCII character.
+     * <p>
+     * Description as per spec: Print boolean t1 (single character) to standard output stream,
+     * right-adjusted in a field of t0 blank characters
+     */
+    public void writeByte() {
+        loadConst(0);
+        addInstructionToCodeBufferLol(bprint);
     }
 
     @Override
     public void writeString(int addr) {
+        addInstructionToCodeBufferLol(sprint);
+        addExplicitOperandToCodeBuffer(addr, s16);
+    }
 
+    /**
+     * Read integer from standard input stream onto expression stack.
+     * <p>
+     * Note: consumes "[^-0-9]*(-?\d+)[\n]*" and converts the part in brackets into an integer.
+     * Note: when entered over console, this will not consume the newline character(s).
+     */
+    public void readInteger() {
+        addInstructionToCodeBufferLol(read);
+    }
+
+    /**
+     * Read a byte value (single character) from standard input stream.
+     */
+    public void readByte() {
+        addInstructionToCodeBufferLol(bread);
     }
 
     @Override
