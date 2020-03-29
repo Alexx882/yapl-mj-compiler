@@ -25,6 +25,11 @@ public class BackendMJ implements BackendBinSM {
     private Map<String, Integer> codeAddressForLabels = new HashMap<>();
     private Map<String, List<Integer>> backpatchingAddressesForLabels = new HashMap<>();
 
+    private static final int HEADER_SIZE = 14;
+    private static final int OFFSET_CODESIZE = 2;
+    private static final int OFFSET_DATASIZE = 6;
+    private static final int OFFSET_STARTPC = 10;
+
     int getNextCodeBufferAdress() {
         return codeBuffer.size();
     }
@@ -187,7 +192,28 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void writeObjectFile(OutputStream outStream) throws IOException {
+        LinkedList<Byte> header = new LinkedList<>();
 
+        header.add((byte) 0x4D);
+        header.add((byte) 0x4A);
+
+        byte[] codeSize = ByteUtils.numberAsBytes(codeBuffer.size());
+        for (byte value : codeSize) header.add(value);
+
+        byte[] dataSize = ByteUtils.numberAsBytes(staticDataBuffer.size());
+        for (byte value : dataSize) header.add(value);
+
+        byte[] startPc = ByteUtils.numberAsBytes(0);
+        for (byte value : startPc) header.add(value);
+
+        for (Byte b : header)
+            outStream.write(b);
+
+        for (Byte b : codeBuffer)
+            outStream.write(b);
+
+        for (Byte b : staticDataBuffer)
+            outStream.write(b);
     }
 
     @Override
@@ -241,18 +267,52 @@ public class BackendMJ implements BackendBinSM {
      */
     @Override
     public int allocStack(int words) {
-        return 0;
+        if (currentlyDefinedProcedure == null)
+            throw new IllegalStateException("Cannot allocate variables without a procedure.");
+
+        return currentlyDefinedProcedure.allocStackVariable(words);
+    }
+
+    private void backpatch(int location, byte[] bytes) {
+        for (int i = 0; i < bytes.length; i++) {
+            if (codeBuffer.get(location + i) != null)
+                throw new IllegalStateException(String.format("Codebuffer has no placeholder at location %d", location + i));
+
+            codeBuffer.set(location + i, bytes[i]);
+        }
+    }
+
+    private void backpatch(int location, byte value) {
+        backpatch(location, new byte[]{value});
+    }
+
+    private void backpatch(int location, short value) {
+        backpatch(location, ByteUtils.numberAsBytes(value));
+    }
+
+    private void backpatch(int location, int value) {
+        backpatch(location, ByteUtils.numberAsBytes(value));
     }
 
     @Override
     public void exitProc(String label) {
+        // backpatch framesize (which we now know because all variables were declared and we know their size)
+        backpatch(currentlyDefinedProcedure.backPatchLocation(), currentlyDefinedProcedure.frameSize());
 
+        // mark teardown with provided label
+        assignLabel(label);
+
+        // write opcode for EXIT to codebuffer
+        addInstructionToCodeBufferLol(exit);
+
+        currentlyDefinedProcedure = null;
     }
-
 
     @Override
     public void allocHeap(int words) {
+        addInstructionToCodeBufferLol(new_);
 
+        addExplicitOperandToCodeBuffer((short) words);
     }
 
     @Override
@@ -273,12 +333,38 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void loadWord(MemoryRegion region, int offset) {
+        switch (region) {
+            case STACK:
+                addInstructionToCodeBufferLol(load);
 
+                addExplicitOperandToCodeBuffer((byte) offset);
+                break;
+            case STATIC:
+                addInstructionToCodeBufferLol(getstatic);
+
+                addExplicitOperandToCodeBuffer((short) offset);
+                break;
+            case HEAP:
+                addInstructionToCodeBufferLol(getfield);
+
+                addExplicitOperandToCodeBuffer((short) offset);
+                break;
+        }
     }
 
     @Override
     public void storeWord(MemoryRegion region, int offset) {
+        switch (region) {
+            case STACK:
 
+                break;
+            case STATIC:
+
+                break;
+            case HEAP:
+
+                break;
+        }
     }
 
     @Override
