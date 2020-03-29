@@ -8,7 +8,7 @@ import java.io.OutputStream;
 import java.util.*;
 
 import static yapl.impl.BackendMJ.Instruction.*;
-import static yapl.impl.BackendMJ.OperandType.*;
+import static yapl.impl.ByteUtils.OperandType.*;
 
 /**
  * Implementation of CA1
@@ -54,29 +54,8 @@ public class BackendMJ implements BackendBinSM {
      * @param operand the explicit operand
      * @param type    the type/size of the operand
      */
-    void addExplicitOperandToCodeBuffer(int operand, OperandType type) {
-        byte[] bytes = ByteUtils.intToBytes(operand);
-        switch (type) {
-            case s32:
-                codeBuffer.add(bytes[0]);
-                codeBuffer.add(bytes[1]);
-            case s16:
-                codeBuffer.add(bytes[2]);
-            case s8:
-                codeBuffer.add(bytes[3]);
-        }
-    }
-
-    void addExplicitOperandToCodeBuffer(int operand) {
-        addExplicitOperandToCodeBuffer(operand, s32);
-    }
-
-    void addExplicitOperandToCodeBuffer(short operand) {
-        addExplicitOperandToCodeBuffer(operand, s16);
-    }
-
-    void addExplicitOperandToCodeBuffer(byte operand) {
-        addExplicitOperandToCodeBuffer(operand, s8);
+    void addExplicitOperandToCodeBuffer(int operand, ByteUtils.OperandType type) {
+        codeBuffer.addAll(ByteUtils.numberAsBytes(operand, type));
     }
 
     /**
@@ -92,18 +71,6 @@ public class BackendMJ implements BackendBinSM {
             codeBuffer.add(null);
 
         return startOfArea;
-    }
-
-    enum OperandType {
-        s8(1),
-        s16(2),
-        s32(4);
-
-        int size;
-
-        OperandType(int size) {
-            this.size = size;
-        }
     }
 
     enum Instruction {
@@ -194,14 +161,10 @@ public class BackendMJ implements BackendBinSM {
         header.add((byte) 0x4D);
         header.add((byte) 0x4A);
 
-        byte[] codeSize = ByteUtils.numberAsBytes(codeBuffer.size());
-        for (byte value : codeSize) header.add(value);
-
-        byte[] dataSize = ByteUtils.numberAsBytes(staticDataBuffer.size());
-        for (byte value : dataSize) header.add(value);
-
-        byte[] startPc = ByteUtils.numberAsBytes(0);
-        for (byte value : startPc) header.add(value);
+        header.addAll(ByteUtils.numberAsBytes(codeBuffer.size()));
+        header.addAll(ByteUtils.numberAsBytes(staticDataBuffer.size()));
+        // TODO change to call main()
+        header.addAll(ByteUtils.numberAsBytes(0));
 
         for (Byte b : header)
             outStream.write(b);
@@ -249,7 +212,7 @@ public class BackendMJ implements BackendBinSM {
         this.addInstructionToCodeBufferLol(enter);
 
         // add number of arguments (s8 value) to the codebuffer
-        this.addExplicitOperandToCodeBuffer((byte) nParams);
+        this.addExplicitOperandToCodeBuffer(nParams, s8);
 
         int backPatchLocation = addPlaceholderByteToCodeBuffer(1);
 
@@ -270,17 +233,17 @@ public class BackendMJ implements BackendBinSM {
         return currentlyDefinedProcedure.allocStackVariable(words);
     }
 
-    private void backpatch(int location, byte[] bytes) {
-        for (int i = 0; i < bytes.length; i++) {
+    private void backpatch(int location, List<Byte> bytes) {
+        for (int i = 0; i < bytes.size(); i++) {
             if (codeBuffer.get(location + i) != null)
                 throw new IllegalStateException(String.format("Codebuffer has no placeholder at location %d", location + i));
 
-            codeBuffer.set(location + i, bytes[i]);
+            codeBuffer.set(location + i, bytes.get(i));
         }
     }
 
     private void backpatch(int location, byte value) {
-        backpatch(location, new byte[]{value});
+        backpatch(location, ByteUtils.numberAsBytes(value));
     }
 
     private void backpatch(int location, short value) {
@@ -310,7 +273,7 @@ public class BackendMJ implements BackendBinSM {
     public void allocHeap(int words) {
         addInstructionToCodeBufferLol(new_);
 
-        addExplicitOperandToCodeBuffer((short) words);
+        addExplicitOperandToCodeBuffer(words, s16);
     }
 
     @Override
@@ -326,7 +289,7 @@ public class BackendMJ implements BackendBinSM {
     @Override
     public void loadConst(int value) {
         addInstructionToCodeBufferLol(const_);
-        addExplicitOperandToCodeBuffer(value);
+        addExplicitOperandToCodeBuffer(value, s32);
     }
 
     @Override
@@ -335,17 +298,17 @@ public class BackendMJ implements BackendBinSM {
             case STACK:
                 addInstructionToCodeBufferLol(load);
 
-                addExplicitOperandToCodeBuffer((byte) offset);
+                addExplicitOperandToCodeBuffer(offset, s8);
                 break;
             case STATIC:
                 addInstructionToCodeBufferLol(getstatic);
 
-                addExplicitOperandToCodeBuffer((short) offset);
+                addExplicitOperandToCodeBuffer(offset, s16);
                 break;
             case HEAP:
                 addInstructionToCodeBufferLol(getfield);
 
-                addExplicitOperandToCodeBuffer((short) offset);
+                addExplicitOperandToCodeBuffer(offset, s16);
                 break;
         }
     }
