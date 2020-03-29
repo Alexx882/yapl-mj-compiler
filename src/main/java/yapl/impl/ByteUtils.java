@@ -1,7 +1,7 @@
 package yapl.impl;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class ByteUtils {
@@ -9,66 +9,40 @@ public class ByteUtils {
     private ByteUtils() {
     }
 
-    public static List<Byte> primitiveArrayAsList(byte[] bytes) {
-        ArrayList<Byte> boxedList = new ArrayList<>(bytes.length);
-        for (byte b : bytes) boxedList.add(b);
-        return boxedList;
-    }
+    /**
+     * mask to mask a single byte
+     */
+    private static final byte mask = (byte) 0b11111111;
 
-    public static byte[] numberAsBytesArray(int i) {
-        ByteBuffer bb = ByteBuffer.allocate(4);
-        bb.putInt(i);
-        return bb.array();
-    }
-
-    public static byte[] numberAsBytesArray(short i) {
-        ByteBuffer bb = ByteBuffer.allocate(2);
-        bb.putInt(i);
-        return bb.array();
-    }
-
-    public static byte[] numberAsBytesArray(byte i) {
-        return new byte[]{i};
-    }
-
-    public static List<Byte> numberAsBytes(int number, OperandType type) {
-        List<Byte> bytes = null;
-        switch (type) {
-            case s32:
-                bytes = ByteUtils.numberAsBytes(/*(int)*/ number);
-                break;
-            case s16:
-                bytes = ByteUtils.numberAsBytes((short) number);
-                break;
-            case s8:
-                bytes = ByteUtils.numberAsBytes((byte) number);
-                break;
-        }
-
-        return bytes;
-    }
-
+    /**
+     * @param i - input integer
+     * @return list comprising of 4 bytes
+     */
     public static List<Byte> numberAsBytes(int i) {
-        return primitiveArrayAsList(numberAsBytesArray(i));
+        byte b1 = (byte) ((i >> 24) & mask);
+        byte b2 = (byte) ((i >> 16) & mask);
+        byte b3 = (byte) ((i >> 8) & mask);
+        byte b4 = (byte) (i & mask);
+
+        return Arrays.asList(b1, b2, b3, b4);
     }
 
+    /**
+     * @param i - input short
+     * @return list comprising of 2 bytes
+     */
     public static List<Byte> numberAsBytes(short i) {
-        return primitiveArrayAsList(numberAsBytesArray(i));
+        byte b1 = (byte) ((i >> 8) & mask);
+        byte b2 = (byte) (i & mask);
+
+        return Arrays.asList(b1, b2);
     }
 
+    /**
+     * @param i - input byte
+     * @return list comprising of 1 bytes
+     */
     public static List<Byte> numberAsBytes(byte i) {
-        return primitiveArrayAsList(numberAsBytesArray(i));
-    }
-
-    enum OperandType {
-        s8(1),
-        s16(2),
-        s32(4);
-
-        int size;
-
-        OperandType(int size) {
-            this.size = size;
-        }
+        return Collections.singletonList(i);
     }
 }

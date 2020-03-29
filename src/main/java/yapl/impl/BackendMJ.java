@@ -7,8 +7,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.*;
 
-import static yapl.impl.BackendMJ.Instruction.*;
-import static yapl.impl.ByteUtils.OperandType.*;
+import static yapl.impl.Instruction.*;
 
 /**
  * Implementation of CA1
@@ -25,19 +24,62 @@ public class BackendMJ implements BackendBinSM {
     private Map<String, Integer> codeAddressForLabels = new HashMap<>();
     private Map<String, List<Integer>> backpatchingAddressesForLabels = new HashMap<>();
 
-    private static final int HEADER_SIZE = 14;
-    private static final int OFFSET_CODESIZE = 2;
-    private static final int OFFSET_DATASIZE = 6;
-    private static final int OFFSET_STARTPC = 10;
+    enum OperandType {
+        s8(1),
+        s16(2),
+        s32(4);
 
+        int size;
+
+        OperandType(int size) {
+            this.size = size;
+        }
+    }
+
+    /**
+     * @param number - input operand comprising of >= 1 bytes
+     * @param type   - input type conducting the length of the output list
+     * @return byte representation of number
+     */
+    public static List<Byte> numberAsBytes(int number, OperandType type) {
+        List<Byte> bytes = null;
+        switch (type) {
+            case s32:
+                bytes = ByteUtils.numberAsBytes(/*(int)*/ number);
+                break;
+            case s16:
+                bytes = ByteUtils.numberAsBytes((short) number);
+                break;
+            case s8:
+                bytes = ByteUtils.numberAsBytes((byte) number);
+                break;
+        }
+
+        return bytes;
+    }
+
+    /**
+     * @return the adress of the next byte in the codebuffer (not there yet)
+     */
     int getNextCodeBufferAdress() {
         return codeBuffer.size();
     }
 
+    /**
+     * adds the opcode of a instruction to the codebuffer
+     *
+     * @param instruction - holds opcode value
+     */
     void addInstructionToCodeBufferLol(Instruction instruction) {
         codeBuffer.add(instruction.value);
     }
 
+    /**
+     * sets the address of a label
+     *
+     * @param label
+     * @param address
+     */
     void addToBackpatchingMap(String label, Integer address) {
         List<Integer> list = backpatchingAddressesForLabels.getOrDefault(label, new LinkedList<>());
         list.add(address);
@@ -54,8 +96,8 @@ public class BackendMJ implements BackendBinSM {
      * @param operand the explicit operand
      * @param type    the type/size of the operand
      */
-    void addExplicitOperandToCodeBuffer(int operand, ByteUtils.OperandType type) {
-        codeBuffer.addAll(ByteUtils.numberAsBytes(operand, type));
+    void addExplicitOperandToCodeBuffer(int operand, OperandType type) {
+        codeBuffer.addAll(numberAsBytes(operand, type));
     }
 
     /**
@@ -71,71 +113,6 @@ public class BackendMJ implements BackendBinSM {
             codeBuffer.add(null);
 
         return startOfArea;
-    }
-
-    enum Instruction {
-        load(1),
-        load0(2),
-        load1(3),
-        load2(4),
-        load3(5),
-        store(6),
-        store0(7),
-        store1(8),
-        store2(9),
-        store3(10),
-        getstatic(11),
-        putstatic(12),
-        getfield(13),
-        putfield(14),
-        const0(15),
-        const1(16),
-        const2(17),
-        const3(18),
-        const4(19),
-        const5(20),
-        const_m1(21),
-        const_(22),
-        add(23),
-        sub(24),
-        mul(25),
-        div(26),
-        rem(27),
-        neg(28),
-        shl(29),
-        shr(30),
-        new_(31),
-        newarray(32),
-        aload(33),
-        astore(34),
-        baload(35),
-        bastore(36),
-        arraylength(37),
-        pop(38),
-        jmp(39),
-        jeq(40),
-        jne(41),
-        jlt(42),
-        jle(43),
-        jgt(44),
-        jge(45),
-        call(46),
-        return_(47),
-        enter(48),
-        exit(49),
-        read(50),
-        print(51),
-        bread(52),
-        bprint(53),
-        trap(54),
-        sprint(55),
-        last(56);
-
-        byte value;
-
-        Instruction(int value) {
-            this.value = (byte) value;
-        }
     }
 
     @Override
@@ -212,7 +189,7 @@ public class BackendMJ implements BackendBinSM {
         this.addInstructionToCodeBufferLol(enter);
 
         // add number of arguments (s8 value) to the codebuffer
-        this.addExplicitOperandToCodeBuffer(nParams, s8);
+        this.addExplicitOperandToCodeBuffer(nParams, OperandType.s8);
 
         int backPatchLocation = addPlaceholderByteToCodeBuffer(1);
 
@@ -273,7 +250,7 @@ public class BackendMJ implements BackendBinSM {
     public void allocHeap(int words) {
         addInstructionToCodeBufferLol(new_);
 
-        addExplicitOperandToCodeBuffer(words, s16);
+        addExplicitOperandToCodeBuffer(words, OperandType.s16);
     }
 
     @Override
@@ -289,7 +266,7 @@ public class BackendMJ implements BackendBinSM {
     @Override
     public void loadConst(int value) {
         addInstructionToCodeBufferLol(const_);
-        addExplicitOperandToCodeBuffer(value, s32);
+        addExplicitOperandToCodeBuffer(value, OperandType.s32);
     }
 
     @Override
@@ -297,18 +274,15 @@ public class BackendMJ implements BackendBinSM {
         switch (region) {
             case STACK:
                 addInstructionToCodeBufferLol(load);
-
-                addExplicitOperandToCodeBuffer(offset, s8);
+                addExplicitOperandToCodeBuffer(offset, OperandType.s8);
                 break;
             case STATIC:
                 addInstructionToCodeBufferLol(getstatic);
-
-                addExplicitOperandToCodeBuffer(offset, s16);
+                addExplicitOperandToCodeBuffer(offset, OperandType.s16);
                 break;
             case HEAP:
                 addInstructionToCodeBufferLol(getfield);
-
-                addExplicitOperandToCodeBuffer(offset, s16);
+                addExplicitOperandToCodeBuffer(offset, OperandType.s16);
                 break;
         }
     }
@@ -317,13 +291,17 @@ public class BackendMJ implements BackendBinSM {
     public void storeWord(MemoryRegion region, int offset) {
         switch (region) {
             case STACK:
-
+                addInstructionToCodeBufferLol(store);
+                addExplicitOperandToCodeBuffer(offset, OperandType.s8);
                 break;
             case STATIC:
-
+                addInstructionToCodeBufferLol(putstatic);
+                addExplicitOperandToCodeBuffer(offset, OperandType.s16);
                 break;
             case HEAP:
-
+                // assumption: address is already pushed on the stack (at least its the case in his tests...)
+                addInstructionToCodeBufferLol(putfield);
+                addExplicitOperandToCodeBuffer(offset, OperandType.s16);
                 break;
         }
     }
@@ -427,7 +405,7 @@ public class BackendMJ implements BackendBinSM {
     public void jump(String label) {
         addInstructionToCodeBufferLol(jmp);
         addToBackpatchingMap(label, getNextCodeBufferAdress());
-        addExplicitOperandToCodeBuffer(0, s16);
+        addExplicitOperandToCodeBuffer(0, OperandType.s16);
     }
 
     @Override
