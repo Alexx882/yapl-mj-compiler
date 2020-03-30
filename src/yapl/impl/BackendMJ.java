@@ -165,8 +165,14 @@ public class BackendMJ implements BackendBinSM {
         for (Byte b : header)
             outStream.write(b);
 
-        for (Byte b : codeBuffer)
+//        int idx = 0;
+        for (Byte b : codeBuffer) {
+//            if(b == null)
+//                throw new RuntimeException("Error for element: " + idx + ":" + codeBuffer.size());
+//            idx++;
+
             outStream.write(b);
+        }
 
         for (Byte b : staticDataBuffer)
             outStream.write(b);
@@ -281,7 +287,8 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void storeArrayDim(int dim) {
-        loadConst(dim);
+        // todo
+//        loadConst(dim);
     }
 
     @Override
@@ -559,12 +566,15 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void callProc(String label) {
+        // FIXME parameters from caller should be available in Stack of callee
         addInstructionToCodeBuffer(call);
         addToBackpatchingMap(label, addPlaceholderBytesToCodeBuffer(2));
     }
 
     @Override
     public int paramOffset(int index) {
-        return 0;
+        int res= wordSize() * index;
+        System.out.println(res);
+        return res;
     }
 }
