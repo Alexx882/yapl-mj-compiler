@@ -18,26 +18,14 @@ public class BackendMJ implements BackendBinSM {
 
     private static final byte ZERO = 0;
 
-    private List<Byte> codeBuffer = new LinkedList<>();
-
+    private List<Byte> codeBuffer = new ArrayList<>();
     private List<Byte> staticDataBuffer = new LinkedList<>();
 
     private Map<String, Integer> codeAddressForLabels = new HashMap<>();
     private Map<String, List<Integer>> backpatchingAddressesForLabels = new HashMap<>();
-
+    
+    private Procedure mainProcedure;
     private Procedure currentlyDefinedProcedure;
-
-    enum OperandType {
-        s8(1),
-        s16(2),
-        s32(4);
-
-        int size;
-
-        OperandType(int size) {
-            this.size = size;
-        }
-    }
 
     /**
      * @param number - input operand comprising of >= 1 bytes
@@ -133,6 +121,24 @@ public class BackendMJ implements BackendBinSM {
         codeAddressForLabels.put(label, getNextCodeBufferAdress());
     }
 
+    /**
+     * iterates over all defined labels and inserts their address to all location the label is referenced
+     */
+    private void backPatchAllLocations() {
+        for (String label : codeAddressForLabels.keySet()) {
+
+            // address the label points to
+            Integer address = codeAddressForLabels.get(label);
+
+            // references in the code
+            List<Integer> references = backpatchingAddressesForLabels.get(label);
+
+            if (references != null)
+                for (Integer reference : references)
+                    backpatch(address, reference.shortValue());
+        }
+    }
+
     @Override
     public void writeObjectFile(OutputStream outStream) throws IOException {
         LinkedList<Byte> header = new LinkedList<>();
@@ -146,7 +152,15 @@ public class BackendMJ implements BackendBinSM {
         // (static) dataSize: number of words (32 bits) in static data area
         header.addAll(ByteUtils.numberAsBytes(staticDataBuffer.size() / wordSize()));
         // startPC: main() or start of code area if there is no main
-        header.addAll(ByteUtils.numberAsBytes(codeAddressForLabels.getOrDefault("main", 0)));
+
+        Integer startPc = codeAddressForLabels.get(mainProcedure.getName());
+
+        if (startPc == null)
+            throw new IllegalStateException("No address for main procedure found!");
+
+        header.addAll(ByteUtils.numberAsBytes(codeAddressForLabels.getOrDefault("main", startPc)));
+
+        backPatchAllLocations();
 
         for (Byte b : header)
             outStream.write(b);
@@ -200,6 +214,13 @@ public class BackendMJ implements BackendBinSM {
         int backPatchLocation = addPlaceholderBytesToCodeBuffer(1);
 
         currentlyDefinedProcedure = new Procedure(label, nParams, backPatchLocation);
+
+        if (main) {
+            if (mainProcedure != null)
+                throw new IllegalStateException("There can only be one main procedure.");
+
+            mainProcedure = currentlyDefinedProcedure;
+        }
     }
 
     /**
