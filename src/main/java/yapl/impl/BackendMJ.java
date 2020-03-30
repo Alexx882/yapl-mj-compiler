@@ -74,10 +74,6 @@ public class BackendMJ implements BackendBinSM {
         codeBuffer.add(instruction.value);
     }
 
-    void addToBackpatchingMap(String label) {
-        addToBackpatchingMap(label, getNextCodeBufferAdress());
-    }
-
     /**
      * sets the address of a label
      *
@@ -353,7 +349,7 @@ public class BackendMJ implements BackendBinSM {
     @Override
     public void writeString(int addr) {
         addInstructionToCodeBufferLol(sprint);
-        addExplicitOperandToCodeBuffer(addr, s16);
+        addExplicitOperandToCodeBuffer(addr, OperandType.s16);
     }
 
     /**
@@ -438,7 +434,7 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void isGreaterOrEqual() {
-        compare(jeq);
+        compare(jge);
     }
 
     /**
@@ -447,25 +443,25 @@ public class BackendMJ implements BackendBinSM {
      * b = pop(); a = pop()
      * push(a ~ b)
      *
-     * @param operator
+     * @param operator the conditional jump opcode
      */
     void compare(Instruction operator) {
         int ifAddress = getNextCodeBufferAdress();
 
         // if condition is true, jump ifLabel
         addInstructionToCodeBufferLol(operator);
-        addExplicitOperandToCodeBuffer(ifAddress + 7);
+        addExplicitOperandToCodeBuffer(ifAddress + 7, OperandType.s16);
 
         // push false
-        loadConst(boolValue(false));
+        addInstructionToCodeBufferLol(const0);
 
         // jump endIfLabel
-        jump(ifAddress + 8);
+        jmp(ifAddress + 8);
 
         // ifLabel
 
         // push true
-        loadConst(boolValue(true));
+        addInstructionToCodeBufferLol(const1);
 
         // endIfLabel
     }
@@ -474,14 +470,14 @@ public class BackendMJ implements BackendBinSM {
     public void branchIf(boolean value, String label) {
         loadConst(boolValue(value));
         addInstructionToCodeBufferLol(jeq);
-        addToBackpatchingMap(label);
+        addToBackpatchingMap(label, getNextCodeBufferAdress());
         addPlaceholderByteToCodeBuffer(2);
     }
 
     @Override
     public void jump(String label) {
-        int backpatchingTarget = jump(0);
-        addToBackpatchingMap(label, backpatchingTarget);
+        int backPatchingTarget = jmp(null);
+        addToBackpatchingMap(label, backPatchingTarget);
     }
 
     /**
@@ -492,19 +488,17 @@ public class BackendMJ implements BackendBinSM {
      * @param address the jump target
      * @return address of the FIRST byte of the jump target
      */
-    public int jump(int address) {
+    public int jmp(Integer address) {
         addInstructionToCodeBufferLol(jmp);
-        int backpatchingTarget = getNextCodeBufferAdress();
+        int backPatchingTarget = getNextCodeBufferAdress();
 
-        if (address == 0) {
+        if (address == null) {
             addPlaceholderByteToCodeBuffer(2);
         } else {
-            addExplicitOperandToCodeBuffer(address, s16);
+            addExplicitOperandToCodeBuffer(address, OperandType.s16);
         }
 
-        return backpatchingTarget;
-        addToBackpatchingMap(label, getNextCodeBufferAdress());
-        addExplicitOperandToCodeBuffer(0, OperandType.s16);
+        return backPatchingTarget;
     }
 
     @Override
