@@ -16,7 +16,7 @@ public class Procedure {
      * overwritten later when the procedure definition is finished and
      * the size can derived
      */
-    private final int backPatchLocation;
+    private final int backPatchLocationForFrameSize;
 
     /**
      * stores the sizes and order of all local variables allocated with
@@ -24,16 +24,16 @@ public class Procedure {
      */
     private final List<Integer> localVariableSizes = new LinkedList<>();
 
-    public Procedure(String name, int nParams, int backPatchLocation) {
+    public Procedure(String name, int nParams, int backPatchLocationForFrameSize) {
         this.name = name;
         this.nParams = nParams;
-        this.backPatchLocation = backPatchLocation;
+        this.backPatchLocationForFrameSize = backPatchLocationForFrameSize;
     }
 
     /**
      * @return frameSize = nParams + nLocalVariables (in words)
      */
-    public byte frameSize() {
+    public byte calculateFrameSize() {
         return (byte) (nParams + localVariableSizes.stream().mapToInt(e -> e).sum());
     }
 
@@ -58,7 +58,7 @@ public class Procedure {
         return nParams;
     }
 
-    public int backPatchLocation() {
-        return backPatchLocation;
+    public int getBackPatchLocation() {
+        return backPatchLocationForFrameSize;
     }
 }
