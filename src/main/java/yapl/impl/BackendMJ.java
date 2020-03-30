@@ -412,6 +412,17 @@ public class BackendMJ implements BackendBinSM {
         isGreaterOrEqual();
     }
 
+    /**
+     * Emit code for logical NOT operation on expression stack.
+     * Assumes a numerical representation of boolean values.
+     */
+    public void not() {
+        // 1 - a
+        addInstructionToCodeBufferLol(neg);
+        loadConst(1);
+        add();
+    }
+
     @Override
     public void isEqual() {
         compare(jeq);
