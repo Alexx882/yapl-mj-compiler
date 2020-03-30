@@ -19,10 +19,13 @@ public class BackendMJ implements BackendBinSM {
     private static final byte ZERO = 0;
 
     private List<Byte> codeBuffer = new LinkedList<>();
+
     private List<Byte> staticDataBuffer = new LinkedList<>();
 
     private Map<String, Integer> codeAddressForLabels = new HashMap<>();
     private Map<String, List<Integer>> backpatchingAddressesForLabels = new HashMap<>();
+
+    private Procedure currentlyDefinedProcedure;
 
     enum OperandType {
         s8(1),
@@ -41,7 +44,7 @@ public class BackendMJ implements BackendBinSM {
      * @param type   - input type conducting the length of the output list
      * @return byte representation of number
      */
-    public static List<Byte> numberAsBytes(int number, OperandType type) {
+    private static List<Byte> numberAsBytes(int number, OperandType type) {
         List<Byte> bytes = null;
         switch (type) {
             case s32:
@@ -61,7 +64,7 @@ public class BackendMJ implements BackendBinSM {
     /**
      * @return the adress of the next byte in the codebuffer (not there yet)
      */
-    int getNextCodeBufferAdress() {
+    private int getNextCodeBufferAdress() {
         return codeBuffer.size();
     }
 
@@ -70,7 +73,7 @@ public class BackendMJ implements BackendBinSM {
      *
      * @param instruction - holds opcode value
      */
-    void addInstructionToCodeBuffer(Instruction instruction) {
+    private void addInstructionToCodeBuffer(Instruction instruction) {
         codeBuffer.add(instruction.value);
     }
 
@@ -80,7 +83,7 @@ public class BackendMJ implements BackendBinSM {
      * @param label
      * @param address
      */
-    void addToBackpatchingMap(String label, Integer address) {
+    private void addToBackpatchingMap(String label, Integer address) {
         List<Integer> list = backpatchingAddressesForLabels.getOrDefault(label, new LinkedList<>());
         list.add(address);
         backpatchingAddressesForLabels.put(label, list);
@@ -96,7 +99,7 @@ public class BackendMJ implements BackendBinSM {
      * @param operand the explicit operand
      * @param type    the type/size of the operand
      */
-    void addExplicitOperandToCodeBuffer(int operand, OperandType type) {
+    private void addExplicitOperandToCodeBuffer(int operand, OperandType type) {
         codeBuffer.addAll(numberAsBytes(operand, type));
     }
 
@@ -106,7 +109,7 @@ public class BackendMJ implements BackendBinSM {
      * @param nBytes - number of placeholder bytes needed
      * @return the position of the FIRST placeholder byte
      */
-    int addPlaceholderBytesToCodeBuffer(int nBytes) {
+    private int addPlaceholderBytesToCodeBuffer(int nBytes) {
         int startOfArea = getNextCodeBufferAdress();
 
         for (int i = 0; i < nBytes; i++)
@@ -159,7 +162,7 @@ public class BackendMJ implements BackendBinSM {
     public int allocStaticData(int words) {
         int sizeBeforeNewString = staticDataBuffer.size();
 
-        for (int i = 0; i < words * 4; ++i)
+        for (int i = 0; i < words * wordSize(); ++i)
             staticDataBuffer.add(ZERO);
 
         return sizeBeforeNewString;
@@ -171,7 +174,6 @@ public class BackendMJ implements BackendBinSM {
 
         for (char c : string.toCharArray())
             staticDataBuffer.add((byte) c);
-
         staticDataBuffer.add((byte) '\0');
 
         int paddingSize = (4 - (staticDataBuffer.size() % 4)) % 4;
@@ -180,8 +182,6 @@ public class BackendMJ implements BackendBinSM {
 
         return sizeBeforeNewString;
     }
-
-    private Procedure currentlyDefinedProcedure;
 
     @Override
     public void enterProc(String label, int nParams, boolean main) {
@@ -255,7 +255,6 @@ public class BackendMJ implements BackendBinSM {
     @Override
     public void allocHeap(int words) {
         addInstructionToCodeBuffer(new_);
-
         addExplicitOperandToCodeBuffer(words, OperandType.s16);
     }
 
