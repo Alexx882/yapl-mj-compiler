@@ -18,27 +18,30 @@ public class TestIo {
         // impl specific methods, so direct access
         BackendMJ backend = new BackendMJ();
 
-        int promptInt = backend.allocStringConstant("hey, pls enter a number");
-        int promptBool = backend.allocStringConstant("is this your number?");
-        int newline = backend.allocStringConstant("\n");
+//        int promptInt = backend.allocStringConstant("hey, pls enter a number");
+//        int promptBool = backend.allocStringConstant("is this your number?");
+//        int newline = backend.allocStringConstant("\n");
 
         backend.enterProc("main", 0, true);
 
-        backend.writeString(promptInt);
-        backend.writeString(newline);
-        backend.readInteger();
+//        backend.writeString(promptInt);
+//        backend.writeString(newline);
+//        backend.readInteger();
+//
+//        backend.writeInteger();
+//        backend.writeString(newline);
+//
+//        backend.writeString(promptBool);
+//        backend.writeString(newline);
+//
+//        backend.readByte();
+//        backend.readByte();
+//        backend.writeByte();
+//        backend.writeInteger();
+//        backend.writeString(newline);
 
+        backend.loadConst(1);
         backend.writeInteger();
-        backend.writeString(newline);
-
-        backend.writeString(promptBool);
-        backend.writeString(newline);
-
-        backend.readByte();
-        backend.readByte();
-        backend.writeByte();
-        backend.writeInteger();
-        backend.writeString(newline);
 
         backend.exitProc("main_end");
 

@@ -12,7 +12,7 @@ M. Taschwer, March 2016
     <property name="mj-jar" location="${globalbasedir}/mjvm/mj.jar"/>
     
     <!-- list of Java test classes -->
-    <property name="testclasses" value="Test1,Test2,Test3,Test4,Test5,Test6"/>
+    <property name="testclasses" value="Test1,Test2,Test3,Test4,Test5,Test6,TestComparisons,TestIo,TestLogic"/>
     
     <!-- properties for invoking 'eval' target directly -->
 	<property name="testname" value="Test1"/>
