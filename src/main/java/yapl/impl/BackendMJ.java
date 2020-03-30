@@ -314,17 +314,17 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void loadArrayElement() {
-
+        addInstructionToCodeBuffer(aload);
     }
 
     @Override
     public void storeArrayElement() {
-
+        addInstructionToCodeBuffer(astore);
     }
 
     @Override
     public void arrayLength() {
-
+        addInstructionToCodeBuffer(arraylength);
     }
 
     @Override
