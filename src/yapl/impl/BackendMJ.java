@@ -135,7 +135,7 @@ public class BackendMJ implements BackendBinSM {
 
             if (references != null)
                 for (Integer reference : references)
-                    backpatch(address, reference.shortValue());
+                    backpatch(reference, address.shortValue());
         }
     }
 
