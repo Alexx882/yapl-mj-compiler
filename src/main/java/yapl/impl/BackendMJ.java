@@ -118,6 +118,9 @@ public class BackendMJ implements BackendBinSM {
         codeAddressForLabels.put(label, getNextCodeBufferAdress());
     }
 
+    /**
+     * iterates over all defined labels and inserts their address to all location the label is referenced
+     */
     private void backPatchAllLocations() {
         for (String label : codeAddressForLabels.keySet()) {
 
@@ -127,8 +130,9 @@ public class BackendMJ implements BackendBinSM {
             // references in the code
             List<Integer> references = backpatchingAddressesForLabels.get(label);
 
-            for (Integer reference : references)
-                backpatch(address, reference.shortValue());
+            if (references != null)
+                for (Integer reference : references)
+                    backpatch(address, reference.shortValue());
         }
     }
 
@@ -145,7 +149,13 @@ public class BackendMJ implements BackendBinSM {
         // (static) dataSize: number of words (32 bits) in static data area
         header.addAll(ByteUtils.numberAsBytes(staticDataBuffer.size() / wordSize()));
         // startPC: main() or start of code area if there is no main
-        header.addAll(ByteUtils.numberAsBytes(codeAddressForLabels.getOrDefault("main", 0)));
+
+        Integer startPc = codeAddressForLabels.get(mainProcedure.getName());
+
+        if (startPc == null)
+            throw new IllegalStateException("No address for main procedure found!");
+
+        header.addAll(ByteUtils.numberAsBytes(codeAddressForLabels.getOrDefault("main", startPc)));
 
         backPatchAllLocations();
 
