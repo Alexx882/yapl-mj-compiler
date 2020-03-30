@@ -260,12 +260,13 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void storeArrayDim(int dim) {
-
+        loadConst(dim);
     }
 
     @Override
     public void allocArray() {
-
+        addInstructionToCodeBuffer(newarray);
+        addExplicitOperandToCodeBuffer(1, OperandType.s8);
     }
 
     @Override
@@ -329,7 +330,7 @@ public class BackendMJ implements BackendBinSM {
     @Override
     public void writeInteger() {
         // print: print integer t1 to standard output stream, right-adjusted in a field of t0 blank characters
-        // insert t0
+        // insert offset of print
         loadConst(0);
         addInstructionToCodeBuffer(print);
     }
