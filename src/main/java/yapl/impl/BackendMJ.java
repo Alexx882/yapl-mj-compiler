@@ -271,8 +271,32 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void loadConst(int value) {
-        addInstructionToCodeBuffer(const_);
-        addExplicitOperandToCodeBuffer(value, OperandType.s32);
+        switch (value) {
+            case 0:
+                addInstructionToCodeBuffer(const0);
+                break;
+            case 1:
+                addInstructionToCodeBuffer(const1);
+                break;
+            case 2:
+                addInstructionToCodeBuffer(const2);
+                break;
+            case 3:
+                addInstructionToCodeBuffer(const3);
+                break;
+            case 4:
+                addInstructionToCodeBuffer(const4);
+                break;
+            case 5:
+                addInstructionToCodeBuffer(const5);
+                break;
+            case -1:
+                addInstructionToCodeBuffer(const_m1);
+                break;
+            default:
+                addInstructionToCodeBuffer(const_);
+                addExplicitOperandToCodeBuffer(value, OperandType.s32);
+        }
     }
 
     @Override
@@ -514,7 +538,8 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void callProc(String label) {
-
+        addInstructionToCodeBuffer(call);
+        addToBackpatchingMap(label, addPlaceholderBytesToCodeBuffer(2));
     }
 
     @Override
