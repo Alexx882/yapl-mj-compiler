@@ -140,7 +140,7 @@ M. Taschwer, March 2016
 	</target>
 
 	<!-- run coverage for all test files from the list -->
-	<target name="coverage-all">
+	<target name="coverage-all" depends="clean">
 		<for param="testname" list="${testclasses}">
 			<sequential>
 				<trycatch>
