@@ -287,8 +287,7 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void storeArrayDim(int dim) {
-        // todo
-//        loadConst(dim);
+        // todo implement
     }
 
     @Override
@@ -566,16 +565,13 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public void callProc(String label) {
-        // FIXME parameters from caller should be available in Stack of callee
         addInstructionToCodeBuffer(call);
         addToBackpatchingMap(label, addPlaceholderBytesToCodeBuffer(2));
     }
 
     @Override
     public int paramOffset(int index) {
-        // todo cleanup
-        int res= wordSize() * index;
-        System.out.println(res);
+        // we use same word size as stack indexing
         return index;
     }
 }
