@@ -1,0 +1,8 @@
+# jacoco stuff
+coverage_data
+report
+*.exec
+
+# testing stuff
+*.mj
+*.txt
