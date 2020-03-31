@@ -34,7 +34,8 @@ public class Procedure {
      * @return frameSize = nParams + nLocalVariables (in words)
      */
     public byte calculateFrameSize() {
-        return (byte) (nParams + localVariableSizes.stream().mapToInt(e -> e).sum());
+        // todo check if *wordsize is needed here
+        return (byte) (nParams *4+ localVariableSizes.stream().mapToInt(e -> e).sum()*4);
     }
 
     /**
@@ -43,7 +44,8 @@ public class Procedure {
      * (like malloc)
      */
     public int allocStackVariable(int nWords) {
-        int address = localVariableSizes.size();
+        // todo check if *wordsize is needed here
+        int address = localVariableSizes.size()*4 + nParams*4;
 
         localVariableSizes.add(nWords);
 
