@@ -7,22 +7,22 @@ public class Procedure {
     /**
      * label which gets jumped to later with call [name]
      */
-    private final String name;
+    public final String name;
 
-    private final int nParams;
+    public final int nParams;
 
     /**
      * location in the bytecode where the framesize is defined. will be
      * overwritten later when the procedure definition is finished and
      * the size can derived
      */
-    private final int backPatchLocationForFrameSize;
+    public final int backPatchLocationForFrameSize;
 
     /**
      * stores the sizes and order of all local variables allocated with
      * allocStack
      */
-    private final List<Integer> localVariableSizes = new LinkedList<>();
+    public final List<Integer> localVariableSizes = new LinkedList<>();
 
     public Procedure(String name, int nParams, int backPatchLocationForFrameSize) {
         this.name = name;
@@ -48,17 +48,5 @@ public class Procedure {
         localVariableSizes.add(nWords);
 
         return address;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public int getnParams() {
-        return nParams;
-    }
-
-    public int getBackPatchLocation() {
-        return backPatchLocationForFrameSize;
     }
 }

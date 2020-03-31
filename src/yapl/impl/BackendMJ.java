@@ -23,7 +23,7 @@ public class BackendMJ implements BackendBinSM {
 
     private Map<String, Integer> codeAddressForLabels = new HashMap<>();
     private Map<String, List<Integer>> backpatchingAddressesForLabels = new HashMap<>();
-    
+
     private Procedure mainProcedure;
     private Procedure currentlyDefinedProcedure;
 
@@ -33,8 +33,10 @@ public class BackendMJ implements BackendBinSM {
      * @return byte representation of number
      */
     private static List<Byte> numberAsBytes(int number, OperandType type) {
-        List<Byte> bytes = null;
+        List<Byte> bytes;
+
         switch (type) {
+            default:
             case s32:
                 bytes = ByteUtils.numberAsBytes(/*(int)*/ number);
                 break;
@@ -153,10 +155,10 @@ public class BackendMJ implements BackendBinSM {
         header.addAll(ByteUtils.numberAsBytes(staticDataBuffer.size() / wordSize()));
         // startPC: main() or start of code area if there is no main
 
-        Integer startPc = codeAddressForLabels.get(mainProcedure.getName());
-
-        if (startPc == null)
+        if (mainProcedure == null)
             throw new IllegalStateException("No address for main procedure found!");
+
+        Integer startPc = codeAddressForLabels.get(mainProcedure.name);
 
         header.addAll(ByteUtils.numberAsBytes(codeAddressForLabels.getOrDefault("main", startPc)));
 
@@ -208,6 +210,9 @@ public class BackendMJ implements BackendBinSM {
         if (currentlyDefinedProcedure != null)
             throw new IllegalStateException("Sub-Procedures are not allowed.");
 
+        if (main && this.mainProcedure != null)
+            throw new IllegalStateException("There can only be one main procedure.");
+
         // mark start of method with label provided
         assignLabel(label);
 
@@ -221,12 +226,8 @@ public class BackendMJ implements BackendBinSM {
 
         currentlyDefinedProcedure = new Procedure(label, nParams, backPatchLocation);
 
-        if (main) {
-            if (mainProcedure != null)
-                throw new IllegalStateException("There can only be one main procedure.");
-
+        if (main)
             mainProcedure = currentlyDefinedProcedure;
-        }
     }
 
     /**
@@ -245,8 +246,8 @@ public class BackendMJ implements BackendBinSM {
 
     private void backpatch(int location, List<Byte> bytes) {
         for (int i = 0; i < bytes.size(); i++) {
-            if (codeBuffer.get(location + i) != null)
-                throw new IllegalStateException(String.format("Codebuffer has no placeholder at location %d", location + i));
+//            if (codeBuffer.get(location + i) != null)
+//                throw new IllegalStateException(String.format("Codebuffer has no placeholder at location %d", location + i));
 
             codeBuffer.set(location + i, bytes.get(i));
         }
@@ -260,14 +261,10 @@ public class BackendMJ implements BackendBinSM {
         backpatch(location, ByteUtils.numberAsBytes(value));
     }
 
-    private void backpatch(int location, int value) {
-        backpatch(location, ByteUtils.numberAsBytes(value));
-    }
-
     @Override
     public void exitProc(String label) {
         // backpatch framesize (which we now know because all variables were declared and we know their size)
-        backpatch(currentlyDefinedProcedure.getBackPatchLocation(), currentlyDefinedProcedure.calculateFrameSize());
+        backpatch(currentlyDefinedProcedure.backPatchLocationForFrameSize, currentlyDefinedProcedure.calculateFrameSize());
 
         // mark teardown with provided label
         assignLabel(label);
@@ -329,6 +326,7 @@ public class BackendMJ implements BackendBinSM {
     @Override
     public void loadWord(MemoryRegion region, int offset) {
         switch (region) {
+            default:
             case STACK:
                 addInstructionToCodeBuffer(load);
                 addExplicitOperandToCodeBuffer(offset, OperandType.s8);
@@ -347,6 +345,7 @@ public class BackendMJ implements BackendBinSM {
     @Override
     public void storeWord(MemoryRegion region, int offset) {
         switch (region) {
+            default:
             case STACK:
                 addInstructionToCodeBuffer(store);
                 addExplicitOperandToCodeBuffer(offset, OperandType.s8);
@@ -386,38 +385,10 @@ public class BackendMJ implements BackendBinSM {
         addInstructionToCodeBuffer(print);
     }
 
-    /**
-     * Seems to print a single ASCII character.
-     * <p>
-     * Description as per spec: Print boolean t1 (single character) to standard output stream,
-     * right-adjusted in a field of t0 blank characters
-     */
-    public void writeByte() {
-        loadConst(0);
-        addInstructionToCodeBuffer(bprint);
-    }
-
     @Override
     public void writeString(int addr) {
         addInstructionToCodeBuffer(sprint);
         addExplicitOperandToCodeBuffer(addr, OperandType.s16);
-    }
-
-    /**
-     * Read integer from standard input stream onto expression stack.
-     * <p>
-     * Note: consumes "[^-0-9]*(-?\d+)[\n]*" and converts the part in brackets into an integer.
-     * Note: when entered over console, this will not consume the newline character(s).
-     */
-    public void readInteger() {
-        addInstructionToCodeBuffer(read);
-    }
-
-    /**
-     * Read a byte value (single character) from standard input stream.
-     */
-    public void readByte() {
-        addInstructionToCodeBuffer(bread);
     }
 
     @Override
