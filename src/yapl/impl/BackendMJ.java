@@ -573,8 +573,9 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public int paramOffset(int index) {
+        // todo cleanup
         int res= wordSize() * index;
         System.out.println(res);
-        return res;
+        return index;
     }
 }
