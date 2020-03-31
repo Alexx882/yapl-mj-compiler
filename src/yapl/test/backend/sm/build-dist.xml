@@ -118,12 +118,11 @@ M. Taschwer, March 2016
 		<delete dir="${testreportdir}"/>
 	</target>
 
-	<target name="decode-mj" depends="run-backend"
-			description="executes generated code 'outfile', writing output to 'runtimeoutput'">
-		<java classname="MJ.Decode" classpath="${mj-jar}" fork="true" output="${runtimeoutput}">
+	<target name="decode" depends="run-backend"
+			description="decodes generated code 'outfile'">
+		<java classname="MJ.Decode" classpath="${mj-jar}" fork="true">
 			<arg value="${outfile}"/>
 		</java>
-		<echo>Wrote output to ${runtimeoutput}</echo>
 	</target>
 
 	<!-- run coverage for a single test file -->
