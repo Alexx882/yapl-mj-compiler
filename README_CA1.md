@@ -25,7 +25,7 @@ Notes: <br>
 `testname` automatically updates `mainclass`, `outfile`, `runtimeoutput`, `truefile`, and `coveragefile`.
 
 ## Project Files
-With the exception of tests, all new code is in package `yapl.impl`.
+With the exception of tests, all new code is in package `yapl.impl` running with Java SDK 13.
 
 - `BackendMJ` implements BackendBinSM
 - `ByteUtils` helper methods for byte manipulation
