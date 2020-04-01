@@ -15,6 +15,13 @@ public class ExceptionTestNoMainMethod {
             System.out.println("nice.");
         }
 
+        backend.enterProc("main", 0, true);
+        backend.loadConst(1);
+        backend.writeInteger();
+        backend.exitProc("main_end");
+
+        backend.writeObjectFile(new FileOutputStream(args[0]));
+
         System.out.println("wrote object file to " + args[0]);
     }
 
