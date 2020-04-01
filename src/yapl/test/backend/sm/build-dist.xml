@@ -10,7 +10,7 @@ M. Taschwer, March 2016
 	<property name="src" location="${globalbasedir}/src"/>
 	<property name="build" location="${globalbasedir}/ant-bin"/>
     <property name="ant-contrib-jar" location="${globalbasedir}/lib/ant-contrib.jar"/>
-	<property name="jacoco-ant-jar" location="${globalbasedir}/lib/jacoco-0.8.5/lib/jacocoant.jar"/>
+	<property name="jacoco-ant-jar" location="${globalbasedir}/lib/jacocoant.jar"/>
     <property name="mj-jar" location="${globalbasedir}/mjvm/mj.jar"/>
 
 	<property name="testresultdir" location="coverage_data"/>
