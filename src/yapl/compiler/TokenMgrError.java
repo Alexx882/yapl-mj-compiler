@@ -156,6 +156,13 @@ public class TokenMgrError extends Error implements CompilerError
     this.column = errorColumn;
   }
 
+  /** Full Constructor. */ // adapter for JavaCC version compatibility
+  public TokenMgrError(boolean EOFSeen, int lexState, int errorLine, int errorColumn, String errorAfter, int curChar, int reason) {
+    this(LexicalError(EOFSeen, lexState, errorLine, errorColumn, errorAfter, (char) curChar), reason);
+    this.line = errorLine;
+    this.column = errorColumn;
+  }
+
   /* CompilerError methods. */
   
   public int errorNumber()

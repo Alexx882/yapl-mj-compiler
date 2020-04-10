@@ -1,0 +1,6 @@
+# ignore JavaCC generated files
+*.java
+
+# except the provided modified ones
+!ParseException.java
+!TokenMgrError.java
