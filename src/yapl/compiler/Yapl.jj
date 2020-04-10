@@ -1,0 +1,327 @@
+options {
+    LOOKAHEAD = 1;
+    CHOICE_AMBIGUITY_CHECK = 2;
+    OTHER_AMBIGUITY_CHECK = 1;
+    STATIC = true;
+    DEBUG_PARSER = false;
+    DEBUG_LOOKAHEAD = false;
+    DEBUG_TOKEN_MANAGER = false;
+    ERROR_REPORTING = true;
+    JAVA_UNICODE_ESCAPE = false;
+    UNICODE_INPUT = false;
+    IGNORE_CASE = false;
+    USER_TOKEN_MANAGER = false;
+    USER_CHAR_STREAM = false;
+    BUILD_PARSER = true;
+    BUILD_TOKEN_MANAGER = true;
+    SANITY_CHECK = true;
+    FORCE_LA_CHECK = false;
+}
+
+PARSER_BEGIN(Yapl)
+
+package yapl.compiler;
+
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+
+public class Yapl {
+
+    public static void main(String args[]) throws ParseException, FileNotFoundException {
+        InputStream input = args.length > 0 ? new FileInputStream(args[0]) : System.in;
+
+        Yapl parser = new Yapl(input);
+        Yapl.Program();
+    }
+}
+
+PARSER_END(Yapl)
+
+SKIP : // ignore whitespace
+{
+    " " | "\t" | "\n" | "\r"
+}
+
+// TODO change comments from SKIP to SPECIAL_TOKEN
+SKIP : // comment syntax from JavaCC docs
+{
+  "/*" : WithinComment
+}
+
+<WithinComment> SKIP :
+{
+  "*/" : DEFAULT
+}
+
+<WithinComment> MORE :
+{
+  <~[]>
+}
+
+TOKEN : { // Keywords. Need to be defined before <ident>
+    < TRUE: "True" >
+  | < FALSE: "False" >
+  | < NEW: "new" >
+  | < AND: "And" >
+  | < OR: "Or" >
+  | < IF: "If" >
+  | < THEN: "Then" >
+  | < ELSE: "Else" >
+  | < ENDIF: "EndIf" >
+  | < WHILE: "While" >
+  | < DO: "Do" >
+  | < ENDWHILE: "EndWhile" >
+  | < RETURN: "Return" >
+  | < WRITE: "Write" >
+  | < BEGIN: "Begin" >
+  | < END: "End" >
+  | < INT: "int" >
+  | < BOOL: "bool" >
+  | < VOID: "void" >
+  | < CONST: "Const" >
+  | < RECORD: "Record" >
+  | < ENDRECORD: "EndRecord" >
+  | < DECLARE: "Declare" >
+  | < PROCEDURE: "Procedure" >
+  | < PROGRAM: "Program" >
+}
+
+TOKEN :
+{
+    < ident: ["a"-"z","A"-"Z","_"] ( ["a"-"z","A"-"Z","_","0"-"9"] )* >
+|
+    < number: ( ["0"-"9"] )+ >
+|
+    < string: "\"" ([" ","a"-"z","A"-"Z","_","0"-"9",
+                   "+","-","*","/",".",",",";",":","!","?","=","#","%","<",">","$",
+                   "(",")","[","]","{","}","\\","@","&","^","|"])* "\"">
+}
+
+void RelOp() :
+{}
+{
+    "<" | "<=" | ">=" | ">"
+}
+
+void EqualOp() :
+{}
+{
+    "==" | "!="
+}
+
+void AddOp() :
+{}
+{
+    "+" | "-"
+}
+
+void MulOp() :
+{}
+{
+    "*" | "/" | "%"
+}
+
+void Literal() :
+{}
+{
+    <TRUE> | <FALSE> | <number>
+}
+
+void Selector() :
+{}
+{
+    ( "[" Expr() "]" | "." <ident> ) [ Selector() ]
+}
+
+void ArrayLen() :
+{}
+{
+    "#" <ident> [ Selector() ]
+}
+
+void PrimaryExpr() :
+{}
+{
+    Literal() | "(" Expr() ")" | <ident> ( ProcedureArguments() | [ Selector() ]) | ArrayLen()
+}
+
+void UnaryExpr() :
+{}
+{
+    [ AddOp() ] PrimaryExpr()
+}
+
+void MulExpr() :
+{}
+{
+    UnaryExpr() ( MulOp() UnaryExpr() )*
+}
+
+void AddExpr() :
+{}
+{
+    MulExpr() ( AddOp() MulExpr() )*
+}
+
+void RelExpr() :
+{}
+{
+    AddExpr() [ RelOp() AddExpr() ]
+}
+
+void EqualExpr() :
+{}
+{
+    RelExpr() [ EqualOp() RelExpr() ]
+}
+
+void CondAndExpr() :
+{}
+{
+    EqualExpr() ( <AND> EqualExpr() )*
+}
+
+void CreationExpr() :
+{}
+{
+    <NEW> NonArrayType() ( "[" Expr() "]" )*
+}
+
+void Expr() :
+{}
+{
+    CondAndExpr() ( <OR> CondAndExpr() )* | CreationExpr()
+}
+
+void ArgumentList() :
+{}
+{
+    Expr() ( "," Expr() )*
+}
+
+void ProcedureArguments() :
+{}
+{
+    "(" [ ArgumentList() ] ")"
+}
+
+void ProcedureCall() :
+{}
+{
+    <ident> ProcedureArguments()
+}
+
+void Assignment() :
+{}
+{
+    [ Selector() ] ":=" Expr()
+}
+
+void IfStatement() :
+{}
+{
+    <IF> Expr() <THEN> StatementList() [ <ELSE> StatementList() ] <ENDIF>
+}
+
+void WhileStatement() :
+{}
+{
+    <WHILE> Expr() <DO> StatementList() <ENDWHILE>
+}
+
+void ReturnStatement() :
+{}
+{
+    <RETURN> [ Expr() ]
+}
+
+void WriteStatement() :
+{}
+{
+    <WRITE> <string>
+}
+
+void Statement() :
+{}
+{
+    IfStatement() | WhileStatement() | ReturnStatement() | WriteStatement() | <ident> ( Assignment() | ProcedureArguments() ) | Block()
+}
+
+void StatementList() :
+{}
+{
+    ( Statement() ";" )*
+}
+
+void Block() :
+{}
+{
+    [ Decl() ] <BEGIN> StatementList() <END>
+}
+
+void NonArrayType() :
+{}
+{
+    <INT> | <BOOL> | <ident>
+}
+
+void Type() :
+{}
+{
+    NonArrayType() ( "[" "]" )*
+}
+
+void ReturnType() :
+{}
+{
+    <VOID> | Type()
+}
+
+void ConstDecl() :
+{}
+{
+    <CONST> <ident> "=" Literal() ";"
+}
+
+void VarDecl() :
+{}
+{
+    Type() <ident> ( "," <ident> )* ";"
+}
+
+void TypeDecl() :
+{}
+{
+    <RECORD> <ident> VarDecl() ( VarDecl() )* <ENDRECORD> ";"
+}
+
+void Decl() :
+{}
+{
+    <DECLARE> ( ConstDecl() | VarDecl() | TypeDecl() )*
+}
+
+void FormalParam() :
+{}
+{
+    Type() <ident>
+}
+
+void FormalParamList() :
+{}
+{
+    FormalParam() ( "," FormalParam() )*
+}
+
+void Procedure() :
+{}
+{
+    <PROCEDURE> ReturnType() <ident> "(" [ FormalParamList() ] ")" Block() <ident> ";"
+}
+
+void Program() :
+{}
+{
+    <PROGRAM> <ident> ( Decl() | Procedure() )* <BEGIN> StatementList() <END> <ident> "." <EOF>
+}
