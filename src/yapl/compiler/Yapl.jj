@@ -1,3 +1,4 @@
+//noinspection UnusedProduction
 options {
     LOOKAHEAD = 1;
     CHOICE_AMBIGUITY_CHECK = 2;
@@ -25,10 +26,11 @@ package yapl.compiler;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.util.Stack;
 
 public class Yapl {
 
-    public static void main(String args[]) throws ParseException, FileNotFoundException {
+    public static void main(String[] args) throws ParseException, FileNotFoundException {
         InputStream input = args.length > 0 ? new FileInputStream(args[0]) : System.in;
 
         Yapl parser = new Yapl(input);
@@ -43,20 +45,20 @@ SKIP : // ignore whitespace
     " " | "\t" | "\n" | "\r"
 }
 
-// TODO change comments from SKIP to SPECIAL_TOKEN
-SKIP : // comment syntax from JavaCC docs
+SPECIAL_TOKEN : // comment syntax from JavaCC docs
 {
-  "/*" : WithinComment
+  "/*" : WithinComment // switch to WithinComment state
 }
 
-<WithinComment> SKIP :
+<WithinComment> SPECIAL_TOKEN :
 {
-  "*/" : DEFAULT
+  "*/" : DEFAULT // switch back to normal
 }
 
-<WithinComment> MORE :
+<WithinComment> MORE : // append to previous token
 {
-  <~[]>
+  // since the end comment "*/" is defined above, there is no need to explicitly check for it
+  <~[]> // "not nothing" -> any symbol
 }
 
 TOKEN : { // Keywords. Need to be defined before <ident>
@@ -87,6 +89,30 @@ TOKEN : { // Keywords. Need to be defined before <ident>
   | < PROGRAM: "Program" >
 }
 
+TOKEN : { // operators
+    < GT: ">" >
+  | < GE: ">=" >
+  | < LT: "<" >
+  | < LE: "<=" >
+  | < EQ: "==" >
+  | < NE: "!=" >
+  | < ADD: "+" >
+  | < SUB: "-" >
+  | < MUL: "*" >
+  | < DIV: "/" >
+  | < MOD: "%" >
+  | < CONST_ASSIGN: "=" >
+  | < ASSIGN: ":=" >
+  | < ARR_LEN: "#" >
+  | < L_BRACKET: "(" >
+  | < R_BRACKET: ")" >
+  | < L_SQ_BRACKET: "[" >
+  | < R_SQ_BRACKET: "]" >
+  | < COMMA: "," >
+  | < SEMICOLON: ";" >
+  | < DOT: "." >
+}
+
 TOKEN :
 {
     < ident: ["a"-"z","A"-"Z","_"] ( ["a"-"z","A"-"Z","_","0"-"9"] )* >
@@ -98,28 +124,57 @@ TOKEN :
                    "(",")","[","]","{","}","\\","@","&","^","|"])* "\"">
 }
 
+void PrintTokens() :
+{ Token t; }
+{
+    {
+        do {
+            t = getNextToken();
+
+            // collect special tokens that appeared between t and the last token
+            // access through t.specialToken (if more than one, then access recursively -> need to reverse order)
+            Stack<Token> stack = new Stack<>();
+            Token s = t.specialToken;
+            while (s != null) {
+                stack.push(s);
+                s = s.specialToken;
+            }
+
+            if (!stack.empty()) {
+                System.out.println("[begin special]");
+                while (!stack.empty())
+                    System.out.println(stack.pop().toString());
+                System.out.println("[end special]");
+            }
+
+            System.out.println(t.toString());
+        } while (t.kind != EOF);
+    }
+    <EOF >
+}
+
 void RelOp() :
 {}
 {
-    "<" | "<=" | ">=" | ">"
+    <LT> | <LE> | <GT> | <GE>
 }
 
 void EqualOp() :
 {}
 {
-    "==" | "!="
+    <EQ> | <NE>
 }
 
 void AddOp() :
 {}
 {
-    "+" | "-"
+    <ADD> | <SUB>
 }
 
 void MulOp() :
 {}
 {
-    "*" | "/" | "%"
+    <MUL> | <DIV> | <MOD>
 }
 
 void Literal() :
@@ -131,19 +186,19 @@ void Literal() :
 void Selector() :
 {}
 {
-    ( "[" Expr() "]" | "." <ident> ) [ Selector() ]
+    ( <L_SQ_BRACKET> Expr() <R_SQ_BRACKET> | <DOT> <ident> ) [ Selector() ]
 }
 
 void ArrayLen() :
 {}
 {
-    "#" <ident> [ Selector() ]
+    <ARR_LEN> <ident> [ Selector() ]
 }
 
 void PrimaryExpr() :
 {}
 {
-    Literal() | "(" Expr() ")" | <ident> ( ProcedureArguments() | [ Selector() ]) | ArrayLen()
+    Literal() | <L_BRACKET> Expr() <R_BRACKET> | <ident> ( ProcedureArguments() | [ Selector() ]) | ArrayLen()
 }
 
 void UnaryExpr() :
@@ -185,7 +240,7 @@ void CondAndExpr() :
 void CreationExpr() :
 {}
 {
-    <NEW> NonArrayType() ( "[" Expr() "]" )*
+    <NEW> NonArrayType() ( <L_SQ_BRACKET> Expr() <R_SQ_BRACKET> )*
 }
 
 void Expr() :
@@ -197,13 +252,13 @@ void Expr() :
 void ArgumentList() :
 {}
 {
-    Expr() ( "," Expr() )*
+    Expr() ( <COMMA> Expr() )*
 }
 
 void ProcedureArguments() :
 {}
 {
-    "(" [ ArgumentList() ] ")"
+    <L_BRACKET> [ ArgumentList() ] <R_BRACKET>
 }
 
 void ProcedureCall() :
@@ -215,7 +270,7 @@ void ProcedureCall() :
 void Assignment() :
 {}
 {
-    [ Selector() ] ":=" Expr()
+    [ Selector() ] <ASSIGN> Expr()
 }
 
 void IfStatement() :
@@ -251,7 +306,7 @@ void Statement() :
 void StatementList() :
 {}
 {
-    ( Statement() ";" )*
+    ( Statement() <SEMICOLON> )*
 }
 
 void Block() :
@@ -269,7 +324,7 @@ void NonArrayType() :
 void Type() :
 {}
 {
-    NonArrayType() ( "[" "]" )*
+    NonArrayType() ( <L_SQ_BRACKET> <R_SQ_BRACKET> )*
 }
 
 void ReturnType() :
@@ -281,19 +336,19 @@ void ReturnType() :
 void ConstDecl() :
 {}
 {
-    <CONST> <ident> "=" Literal() ";"
+    <CONST> <ident> <CONST_ASSIGN> Literal() <SEMICOLON>
 }
 
 void VarDecl() :
 {}
 {
-    Type() <ident> ( "," <ident> )* ";"
+    Type() <ident> ( <COMMA> <ident> )* <SEMICOLON>
 }
 
 void TypeDecl() :
 {}
 {
-    <RECORD> <ident> VarDecl() ( VarDecl() )* <ENDRECORD> ";"
+    <RECORD> <ident> VarDecl() ( VarDecl() )* <ENDRECORD> <SEMICOLON>
 }
 
 void Decl() :
@@ -311,17 +366,17 @@ void FormalParam() :
 void FormalParamList() :
 {}
 {
-    FormalParam() ( "," FormalParam() )*
+    FormalParam() ( <COMMA> FormalParam() )*
 }
 
 void Procedure() :
 {}
 {
-    <PROCEDURE> ReturnType() <ident> "(" [ FormalParamList() ] ")" Block() <ident> ";"
+    <PROCEDURE> ReturnType() <ident> <L_BRACKET> [ FormalParamList() ] <R_BRACKET> Block() <ident> <SEMICOLON>
 }
 
 void Program() :
 {}
 {
-    <PROGRAM> <ident> ( Decl() | Procedure() )* <BEGIN> StatementList() <END> <ident> "." <EOF>
+    <PROGRAM> <ident> ( Decl() | Procedure() )* <BEGIN> StatementList() <END> <ident> <DOT> <EOF>
 }
