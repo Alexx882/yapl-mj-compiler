@@ -1,3 +1,4 @@
+<!-- renamed from build-dist-mj.xml as requested in submission-guidelines -->
 <project name="The YAPL Compiler" default="compile-java" basedir=".">
     <description>
         ANT build file for the YAPL compiler.
