@@ -20,7 +20,7 @@ options {
 
 PARSER_BEGIN(Grammar21)
 
-package yapl.compiler;
+package yapl.compiler.simple;
 
 public class Grammar21 {
 
@@ -32,6 +32,11 @@ public class Grammar21 {
 }
 
 PARSER_END(Grammar21)
+
+SKIP : // ignore whitespace
+{
+    " " | "\t" | "\n" | "\r"
+}
 
 void Input() :
 {}

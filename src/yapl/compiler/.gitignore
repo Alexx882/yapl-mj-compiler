@@ -2,5 +2,5 @@
 *.java
 
 # except the provided modified ones
-!ParseException.java
-!TokenMgrError.java
+!./ParseException.java
+!./TokenMgrError.java
