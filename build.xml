@@ -1,40 +1,43 @@
+<!-- renamed from build-dist-mj.xml as requested in submission-guidelines -->
 <project name="The YAPL Compiler" default="compile-java" basedir=".">
-	<description>
-ANT build file for the YAPL compiler.
+    <description>
+        ANT build file for the YAPL compiler.
 
-User-relevant properties: (customize to your environment)
-  src         - directory containing Java source files
-  build       - directory where to put the compiled Java files
-  javacc      - home directory of the JavaCC installation
-  ant-contrib - path to ant-contrib JAR file
-  mj-jar      - path to MJVM JAR file
-  version     - which YAPL compiler version to test (e.g. parser, symbolcheck, ...)
-  yapl        - YAPL source file
-  outfile     - file where generated target code is written to
-  log         - file where compiler messages are written to
-  grammar     - JavaCC grammar name
-  debug       - enables the debug parser JavaCC option
-	</description>
+        User-relevant properties: (customize to your environment)
+        src         - directory containing Java source files
+        build       - directory where to put the compiled Java files
+        javacc      - home directory of the JavaCC installation
+        ant-contrib - path to ant-contrib JAR file
+        mj-jar      - path to MJVM JAR file
+        version     - which YAPL compiler version to test (e.g. parser, symbolcheck, ...)
+        yapl        - YAPL source file
+        outfile     - file where generated target code is written to
+        log         - file where compiler messages are written to
+        grammar     - JavaCC grammar name
+        debug       - enables the debug parser JavaCC option
+    </description>
 
-	<property name="src" location="src"/>
-	<property name="build" location="ant-bin"/>
-	<property name="javacc" location="lib"/>
-	<property name="ant-contrib" location="lib/ant-contrib.jar"/>
+    <property name="src" location="src"/>
+    <property name="build" location="ant-bin"/>
+    <property name="javacc" location="lib"/>
+    <property name="ant-contrib-jar" location="lib/ant-contrib.jar"/>  <!-- as requested in submission-guidelines -->
+    <property name="ant-contrib" location="${ant-contrib-jar}"/>
     <property name="mj-jar" location="mjvm/mj.jar"/>
-	<property name="version" value="parser"/>
+    <property name="version" value="parser"/>
     <property name="test-file" value="test01"/>
-	<property name="yapl" location="testfiles/${version}/${test-file}.yapl"/>
-	<property name="outfile" value="${yapl}.mj"/>
-	<property name="log" value="${yapl}.log"/>
+    <property name="yapl" location="testfiles/${version}/${test-file}.yapl"/>
+    <property name="outfile" value="${yapl}.mj"/>
+    <property name="log" value="${yapl}.log"/>
     <property name="grammar" value="Yapl"/>
     <property name="debug" value="false"/>
 
     <property name="execlog" value="${yapl}.execlog"/>
     <property name="truefile" value="${yapl}.true"/>
-	
-	<!-- test files for code generating compiler -->
+
+    <!-- test files for code generating compiler -->
     <property name="test-dir" location="testfiles/codegen"/>
-	<property name="test-files" value="test01,test02,test03,test04,test05,test06,test07,test08,test09,test10,test11,test12,test13,test14,test15,test16,test17,test18,test19,test20,test21,test22,test23,test24,test25"/>
+    <property name="test-files"
+              value="test01,test02,test03,test04,test05,test06,test07,test08,test09,test10,test11,test12,test13,test14,test15,test16,test17,test18,test19,test20,test21,test22,test23,test24,test25"/>
 
     <taskdef resource="net/sf/antcontrib/antlib.xml">
         <classpath>
@@ -53,23 +56,23 @@ User-relevant properties: (customize to your environment)
         <delete dir="${build}"/>
         <delete>
             <fileset dir="${src}/yapl/compiler">
-                <include name="*.java"/>
+                <include name="**/*.java"/>
                 <exclude name="TokenMgrError.java"/>
                 <exclude name="ParseException.java"/>
             </fileset>
         </delete>
     </target>
 
-	<target name="compile-ant-task">
-		<javac srcdir="${src}" destdir="${build}" includeantruntime="true">
-			<include name="yapl/ant/*.java"/>
-		</javac>
+    <target name="compile-ant-task" depends="init">
+        <javac srcdir="${src}" destdir="${build}" includeantruntime="true">
+            <include name="yapl/ant/*.java"/>
+        </javac>
         <!--suppress AntResolveInspection -->
-		<typedef name="yaplbadmessage" classname="yapl.ant.YaplBadMessageCondition" classpath="${build}"/>
-	</target>
-		
+        <typedef name="yaplbadmessage" classname="yapl.ant.YaplBadMessageCondition" classpath="${build}"/>
+    </target>
+
     <!-- define here targets for compiling and running the YAPL compiler -->
-    <target name="compile-java" depends="init" description="TODO: compile the YAPL compiler">
+    <target name="compile-java" depends="init" description="compile the YAPL compiler">
         <javacc target="${src}/yapl/compiler/${grammar}.jj" outputdirectory="${src}/yapl/compiler"
                 javacchome="${javacc}" debugparser="${debug}"/>
         <javac srcdir="${src}" destdir="${build}" includeantruntime="true">
@@ -78,7 +81,8 @@ User-relevant properties: (customize to your environment)
             <include name="yapl/lib/*.java"/>
         </javac>
     </target>
-    <target name="run" depends="compile-java" description="TODO: run the YAPL compiler, writing compiler messages to ${log}">
+
+    <target name="run" depends="compile-java" description="run the YAPL compiler, writing compiler messages to ${log}">
         <java classname="yapl.compiler.${grammar}" input="${yapl}" output="${log}">
             <classpath>
                 <pathelement location="${build}"/>
@@ -86,11 +90,12 @@ User-relevant properties: (customize to your environment)
             </classpath>
         </java>
     </target>
+
     <target name="exec" depends="run"
             description="TODO: execute generated byte code in ${outfile}, write run-time output to ${execlog}"/>
 
     <target name="eval-compiler-msg" depends="compile-ant-task, run"
-        description="evaluate error/OK message of YAPL compiler">
+            description="evaluate error/OK message of YAPL compiler">
         <fail>
             <condition>
                 <!--suppress AntResolveInspection -->
@@ -98,13 +103,13 @@ User-relevant properties: (customize to your environment)
             </condition>
         </fail>
     </target>
-    
-    <target name="eval-all" description="evaluate all test cases of a given compiler 'version'">
+
+    <target name="eval-all" description="evaluate all test cases of a given compiler 'version'" depends="compile-java">
         <var name="npassed" value="0"/>
-    	<var name="ntotal" value="0"/>
+        <var name="ntotal" value="0"/>
         <for param="yapl">
             <path>
-            	<fileset dir="testfiles/${version}" includes="*.yapl"/>
+                <fileset dir="testfiles/${version}" includes="*.yapl"/>
             </path>
             <sequential>
                 <trycatch>
@@ -129,7 +134,7 @@ User-relevant properties: (customize to your environment)
     </target>
 
     <target name="eval-codegen" depends="exec"
-        description="evaluate code generating compiler by comparing 'execlog' to 'truefile'">
+            description="evaluate code generating compiler by comparing 'execlog' to 'truefile'">
         <fail message="output file is not correct: ${execlog}">
             <condition>
                 <not>
@@ -138,7 +143,7 @@ User-relevant properties: (customize to your environment)
             </condition>
         </fail>
     </target>
-    
+
     <target name="eval-all-codegen" description="evaluate all test cases of code generating compiler">
         <var name="npassed" value="0"/>
         <var name="ntotal" value="0"/>
@@ -147,7 +152,7 @@ User-relevant properties: (customize to your environment)
                 <trycatch>
                     <try>
                         <antcall target="eval-codegen">
-                        	<param name="yapl" value="${test-dir}/@{testname}.yapl"/>
+                            <param name="yapl" value="${test-dir}/@{testname}.yapl"/>
                             <param name="outfile" value="${test-dir}/@{testname}.mj"/>
                             <param name="log" value="${test-dir}/@{testname}.log"/>
                             <param name="execlog" value="${test-dir}/@{testname}.execlog"/>
