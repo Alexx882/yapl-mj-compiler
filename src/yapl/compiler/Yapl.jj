@@ -31,15 +31,15 @@ import java.io.InputStream;
 import java.util.Stack;
 
 public class Yapl {
+    private static String progName = "unnamedprogram"; // has to be known even on error
 
     public static void main(String[] args) throws FileNotFoundException {
         InputStream input = args.length > 0 ? new FileInputStream(args[0]) : System.in;
 
         Yapl parser = new Yapl(input);
 
-        String progName = "unnamed program";
         try {
-            progName = Yapl.Program();
+            Yapl.Program();
             CompilerMessage.printOK(progName);
         } catch (TokenMgrError | ParseException e) {
 
@@ -385,8 +385,8 @@ void Procedure() :
     <PROCEDURE> ReturnType() <ident> <L_BRACKET> [ FormalParamList() ] <R_BRACKET> Block() <ident> <SEMICOLON>
 }
 
-String Program() :
+void Program() :
 {Token name;}
 {
-    <PROGRAM> name=<ident> ( Decl() | Procedure() )* <BEGIN> StatementList() <END> <ident> <DOT> <EOF> {return name.image;}
+    <PROGRAM> name=<ident> {progName=name.image;} ( Decl() | Procedure() )* <BEGIN> StatementList() <END> <ident> <DOT> <EOF>
 }
