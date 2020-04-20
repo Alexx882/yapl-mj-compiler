@@ -19,8 +19,9 @@
 
     <property name="src" location="src"/>
     <property name="build" location="ant-bin"/>
-    <property name="javacc" location="lib"/> <!-- todo -->
-    <property name="ant-contrib" location="lib/ant-contrib.jar"/>  <!-- todo -->
+    <property name="javacc" location="lib"/>
+    <property name="ant-contrib-jar" location="lib/ant-contrib.jar"/>  <!-- as requested in submission-guidelines -->
+    <property name="ant-contrib" location="${ant-contrib-jar}"/>
     <property name="mj-jar" location="mjvm/mj.jar"/>
     <property name="version" value="parser"/>
     <property name="test-file" value="test01"/>
@@ -62,7 +63,7 @@
         </delete>
     </target>
 
-    <target name="compile-ant-task">
+    <target name="compile-ant-task" depends="init">
         <javac srcdir="${src}" destdir="${build}" includeantruntime="true">
             <include name="yapl/ant/*.java"/>
         </javac>
@@ -103,7 +104,7 @@
         </fail>
     </target>
 
-    <target name="eval-all" description="evaluate all test cases of a given compiler 'version'">
+    <target name="eval-all" description="evaluate all test cases of a given compiler 'version'" depends="compile-java">
         <var name="npassed" value="0"/>
         <var name="ntotal" value="0"/>
         <for param="yapl">
