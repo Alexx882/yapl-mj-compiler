@@ -23,6 +23,8 @@ PARSER_BEGIN(Yapl)
 
 package yapl.compiler;
 
+import yapl.lib.CompilerMessage;
+
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -30,11 +32,19 @@ import java.util.Stack;
 
 public class Yapl {
 
-    public static void main(String[] args) throws ParseException, FileNotFoundException {
+    public static void main(String[] args) throws FileNotFoundException {
         InputStream input = args.length > 0 ? new FileInputStream(args[0]) : System.in;
 
         Yapl parser = new Yapl(input);
-        Yapl.Program();
+
+        String progName = "unnamed program";
+        try {
+            progName = Yapl.Program();
+            CompilerMessage.printOK(progName);
+        } catch (TokenMgrError | ParseException e) {
+
+            CompilerMessage.printError(e, progName);
+        }
     }
 }
 
@@ -375,8 +385,8 @@ void Procedure() :
     <PROCEDURE> ReturnType() <ident> <L_BRACKET> [ FormalParamList() ] <R_BRACKET> Block() <ident> <SEMICOLON>
 }
 
-void Program() :
-{}
+String Program() :
+{Token name;}
 {
-    <PROGRAM> <ident> ( Decl() | Procedure() )* <BEGIN> StatementList() <END> <ident> <DOT> <EOF>
+    <PROGRAM> name=<ident> ( Decl() | Procedure() )* <BEGIN> StatementList() <END> <ident> <DOT> <EOF> {return name.image;}
 }

@@ -22,7 +22,8 @@ User-relevant properties: (customize to your environment)
 	<property name="ant-contrib" location="lib/ant-contrib.jar"/>
     <property name="mj-jar" location="mjvm/mj.jar"/>
 	<property name="version" value="parser"/>
-	<property name="yapl" location="testfiles/${version}/test01.yapl"/>
+    <property name="test-file" value="test01"/>
+	<property name="yapl" location="testfiles/${version}/${test-file}.yapl"/>
 	<property name="outfile" value="${yapl}.mj"/>
 	<property name="log" value="${yapl}.log"/>
     <property name="grammar" value="Yapl"/>
@@ -47,7 +48,7 @@ User-relevant properties: (customize to your environment)
 
     <target name="clean" description="remove generated files">
         <delete>
-            <fileset dir="." includes="*.mj *.txt *.exec *.log"/>
+            <fileset dir="." includes="**/*.mj **/*.txt **/*.exec **/*.log" excludes="*README*"/>
         </delete>
         <delete dir="${build}"/>
         <delete>
