@@ -26,7 +26,7 @@ public class CompilerMessage {
 	
 	/**
 	 * Print a compiler error message to the standard error stream.
-	 * For an internal compiler error ({@link CompilerError.Internal}), the
+	 * For an internal compiler error ({@link CompilerError#Internal}), the
 	 * stack trace will be printed, too, if possible.
 	 * @param err         the Exception or Error object representing the cause
 	 *                    and source location of the error.
