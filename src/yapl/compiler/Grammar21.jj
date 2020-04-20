@@ -20,6 +20,7 @@ options {
 
 PARSER_BEGIN(Grammar21)
 
+package yapl.compiler;
 
 public class Grammar21 {
 
@@ -35,11 +36,17 @@ PARSER_END(Grammar21)
 void Input() :
 {}
 {
-  "ac" | [ A() ] "bc" ("\n"|"\r")* <EOF>
+    (
+        LOOKAHEAD(2)
+        A()
+        |
+        "a"
+    )
+    "c" <EOF>
 }
 
 void A() :
 {}
 {
-  "a" [ A() ]
+    "b" | "a" A()
 }
