@@ -30,19 +30,44 @@ import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.Stack;
 
+/**
+ * Processes a yapl file.
+ *
+ * Usage: java Yapl [--scan-only] [path]
+ *
+ * Where path is the path to a yapl source file.
+ * If no source file is provided, input will be read from STDIN.
+ */
 public class Yapl {
     private static String progName = "unnamedprogram"; // has to be known even on error
 
     public static void main(String[] args) throws FileNotFoundException {
-        InputStream input = args.length > 0 ? new FileInputStream(args[0]) : System.in;
+        // parse per default
+        boolean parse = true;
+        String path = null;
+
+        for (String arg : args) {
+            if ("--scan-only".equalsIgnoreCase(arg)) {
+                parse = false;
+            } else {
+                path = arg;
+            }
+        }
+
+        // if no path is provided, read from STDIN
+        InputStream input = path != null ? new FileInputStream(path) : System.in;
 
         Yapl parser = new Yapl(input);
 
         try {
-            Yapl.Program();
-            CompilerMessage.printOK(progName);
-        } catch (TokenMgrError | ParseException e) {
+            if (parse)
+                Yapl.Program();
+            else
+                Yapl.PrintTokens();
 
+            CompilerMessage.printOK(progName);
+
+        } catch (TokenMgrError | ParseException e) {
             CompilerMessage.printError(e, progName);
         }
     }
