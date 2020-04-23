@@ -26,7 +26,12 @@ public class Grammar21 {
 
   public static void main(String args[]) throws ParseException {
     Grammar21 parser = new Grammar21(System.in);
-    parser.Input();
+    try{
+        parser.Input();
+        System.out.println("VALID");
+    }catch (Exception e){
+        System.out.println("INVALID:\n" + e.getMessage());
+    }
   }
 
 }

@@ -39,7 +39,7 @@ import java.util.Stack;
  * If no source file is provided, input will be read from STDIN.
  */
 public class Yapl {
-    private static String progName = "unnamedprogram"; // has to be known even on error
+    private static String progName = ""; // has to be known even on error
 
     public static void main(String[] args) throws FileNotFoundException {
         // parse per default
@@ -60,12 +60,12 @@ public class Yapl {
         Yapl parser = new Yapl(input);
 
         try {
-            if (parse)
+            if (parse){
                 Yapl.Program();
+                CompilerMessage.printOK(progName);
+            }
             else
                 Yapl.PrintTokens();
-
-            CompilerMessage.printOK(progName);
 
         } catch (TokenMgrError | ParseException e) {
             CompilerMessage.printError(e, progName);
