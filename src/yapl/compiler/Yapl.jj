@@ -1,6 +1,6 @@
 //noinspection UnusedProduction
 options {
-    LOOKAHEAD = 1;
+    LOOKAHEAD = 2;
     CHOICE_AMBIGUITY_CHECK = 2;
     OTHER_AMBIGUITY_CHECK = 1;
     STATIC = true;
@@ -234,8 +234,8 @@ void ArrayLen() :
 void PrimaryExpr() :
 {}
 {
-    Literal() | <L_BRACKET> Expr() <R_BRACKET> | <ident> ( ProcedureArguments() |         [ Selector() ]) | ArrayLen() // LL1
-//  Literal() | <L_BRACKET> Expr() <R_BRACKET> |           ProcedureCall()      | <ident> [ Selector() ]  | ArrayLen() // LL2
+//  Literal() | <L_BRACKET> Expr() <R_BRACKET> | <ident> ( ProcedureArguments() |         [ Selector() ]) | ArrayLen() // LL1
+    Literal() | <L_BRACKET> Expr() <R_BRACKET> |           ProcedureCall()      | <ident> [ Selector() ]  | ArrayLen() // LL2
 }
 
 void UnaryExpr() :
@@ -293,26 +293,26 @@ void ArgumentList() :
 }
 
 // LL1 // this production was created to extract the <ident> prefix from ProcedureCall()
-void ProcedureArguments() :
-{}
-{
-    <L_BRACKET> [ ArgumentList() ] <R_BRACKET> // LL1
-}
+//void ProcedureArguments() :
+//{}
+//{
+//    <L_BRACKET> [ ArgumentList() ] <R_BRACKET> // LL1
+//}
 
 // LL1 // this production is unused, as the prefix was extracted in Statement() and PrimaryExpr()
 void ProcedureCall() :
 {}
 {
-    <ident>    ProcedureArguments()    // LL1
-//  <ident> <L_BRACKET> [ ArgumentList() ] <R_BRACKET> // LL2
+//  <ident>    ProcedureArguments()    // LL1
+    <ident> <L_BRACKET> [ ArgumentList() ] <R_BRACKET> // LL2
 }
 
 // LL1 // the prefix <ident> was extracted from this production into Statement()
 void Assignment() :
 {}
 {
-            [ Selector() ] <ASSIGN> Expr()     // LL1
-//  <ident> [ Selector() ] <ASSIGN> Expr() // LL2
+//          [ Selector() ] <ASSIGN> Expr() // LL1
+    <ident> [ Selector() ] <ASSIGN> Expr() // LL2
 }
 
 void IfStatement() :
@@ -342,8 +342,8 @@ void WriteStatement() :
 void Statement() :
 {}
 {
-    IfStatement() | WhileStatement() | ReturnStatement() | WriteStatement() | <ident> ( Assignment() | ProcedureArguments() ) | Block() // LL1
-//  IfStatement() | WhileStatement() | ReturnStatement() | WriteStatement() |      Assignment()      |     ProcedureCall()    | Block() // LL2
+//  IfStatement() | WhileStatement() | ReturnStatement() | WriteStatement() | <ident> ( Assignment() | ProcedureArguments() ) | Block() // LL1
+    IfStatement() | WhileStatement() | ReturnStatement() | WriteStatement() |      Assignment()      |     ProcedureCall()    | Block() // LL2
 }
 
 void StatementList() :
