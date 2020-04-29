@@ -1,6 +1,6 @@
 //noinspection UnusedProduction
 options {
-    LOOKAHEAD = 2;
+    LOOKAHEAD = 1;
     CHOICE_AMBIGUITY_CHECK = 2;
     OTHER_AMBIGUITY_CHECK = 1;
     STATIC = true;
@@ -235,7 +235,7 @@ void PrimaryExpr() :
 {}
 {
 //  Literal() | <L_BRACKET> Expr() <R_BRACKET> | <ident> ( ProcedureArguments() |         [ Selector() ]) | ArrayLen() // LL1
-    Literal() | <L_BRACKET> Expr() <R_BRACKET> |           ProcedureCall()      | <ident> [ Selector() ]  | ArrayLen() // LL2
+    Literal() | <L_BRACKET> Expr() <R_BRACKET> | LOOKAHEAD(2) ProcedureCall() | <ident> [ Selector() ] | ArrayLen() // LL2
 }
 
 void UnaryExpr() :
@@ -343,7 +343,7 @@ void Statement() :
 {}
 {
 //  IfStatement() | WhileStatement() | ReturnStatement() | WriteStatement() | <ident> ( Assignment() | ProcedureArguments() ) | Block() // LL1
-    IfStatement() | WhileStatement() | ReturnStatement() | WriteStatement() |      Assignment()      |     ProcedureCall()    | Block() // LL2
+    IfStatement() | WhileStatement() | ReturnStatement() | WriteStatement() | LOOKAHEAD(2) Assignment() | ProcedureCall() | Block() // LL2
 }
 
 void StatementList() :
