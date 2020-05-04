@@ -23,6 +23,9 @@ PARSER_BEGIN(Yapl)
 
 package yapl.compiler;
 
+import yapl.impl.SymbolKind;
+import yapl.impl.SymbolTable;
+import yapl.impl.YaplSymbol;
 import yapl.lib.CompilerMessage;
 
 import java.io.FileInputStream;
@@ -40,6 +43,8 @@ import java.util.Stack;
  */
 public class Yapl {
     private static String progName = ""; // has to be known even on error
+
+    private static SymbolTable symbolTable = new SymbolTable();
 
     public static void main(String[] args) throws FileNotFoundException {
         // parse per default
@@ -413,13 +418,52 @@ void FormalParamList() :
 }
 
 void Procedure() :
-{}
+{Token name, endName;}
 {
-    <PROCEDURE> ReturnType() <ident> <L_BRACKET> [ FormalParamList() ] <R_BRACKET> Block() <ident> <SEMICOLON>
+    <PROCEDURE> ReturnType() name=<ident> {
+
+    symbolTable.openScope();
+    symbolTable.setParentSymbol(
+            new YaplSymbol(name, SymbolKind.Procedure)
+    );
+
+    } <L_BRACKET> [ FormalParamList() ] <R_BRACKET> Block() endName=<ident> <SEMICOLON> {
+
+    if(!name.image.equals(endName.image)) {
+            throw new YAPLException(
+                    CompilerError.EndIdentMismatch,
+                    endName.beginLine,
+                    endName.beginColumn
+            );
+        }
+
+
+        symbolTable.closeScope();
+    }
 }
 
 void Program() :
-{Token name;}
+{Token name, endName;}
 {
-    <PROGRAM> name=<ident> {progName=name.image;} ( Decl() | Procedure() )* <BEGIN> StatementList() <END> <ident> <DOT> <EOF>
+    <PROGRAM> name=<ident> {
+    progName=name.image;
+
+    symbolTable.openScope(true);
+    symbolTable.setParentSymbol(
+            new YaplSymbol(progName, SymbolKind.Program)
+    );
+} ( Decl() | Procedure() )* <BEGIN> StatementList() <END> endName=<ident> <DOT> {
+
+    if(!name.image.equals(endName.image)) {
+        throw new YAPLException(
+                CompilerError.EndIdentMismatch,
+                endName.beginLine,
+                endName.beginColumn
+        );
+    }
+
+
+    symbolTable.closeScope();
+
+    } <EOF>
 }
