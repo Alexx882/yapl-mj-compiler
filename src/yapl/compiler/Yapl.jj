@@ -275,13 +275,6 @@ void ArrayLen() throws YaplException :
                     t.beginLine,
                     t.beginColumn
             );
-
-        if(symbol.getSymbolKind() != SymbolKind.Field)
-            throw new YaplException(
-                                CompilerError.ArrayLenNotArray,
-                                t.beginLine,
-                                t.beginColumn
-                        );
     } [ Selector() ]
 }
 
@@ -355,12 +348,14 @@ void ProcedureCall() throws YaplException :
         String symbolName = t.image;
         YaplSymbol symbol = (YaplSymbol) symbolTable.lookup(symbolName);
 
-        if(symbol == null)
+        if(symbol == null){
+            symbolTable.printSymbols();
             throw new YaplException(
                     CompilerError.IdentNotDecl,
                     t.beginLine,
                     t.beginColumn
             );
+        }
 
         if(symbol.getSymbolKind() != SymbolKind.Procedure)
             throw new YaplException(
@@ -382,12 +377,13 @@ void Assignment() throws YaplException :
           String symbolName = t.image;
           YaplSymbol symbol = (YaplSymbol) symbolTable.lookup(symbolName);
 
-          if(symbol == null)
+          if(symbol == null) {
               throw new YaplException(
                       CompilerError.IdentNotDecl,
                       t.beginLine,
                       t.beginColumn
               );
+          }
 
           if(symbol.getSymbolKind() == SymbolKind.Program ||  symbol.getSymbolKind() == SymbolKind.Procedure
               || symbol.getSymbolKind() == SymbolKind.Constant || symbol.getSymbolKind() == SymbolKind.Typename
@@ -508,18 +504,19 @@ void VarDecl() throws YaplException :
          );
 
      } ( <COMMA> t2=<ident> {
-         YaplSymbol symbol2 = (YaplSymbol) symbolTable.lookup(t.image);
+         YaplSymbol symbol2 = (YaplSymbol) symbolTable.lookup(t2.image);
 
-         if(symbol2 != null)
+         if(symbol2 != null) {
              throw new YaplException(
                        CompilerError.SymbolExists,
                        t.beginLine,
                        t.beginColumn
              );
+         }
 
          symbolTable.addSymbol(
                  new YaplSymbol(
-                         t.image, SymbolKind.Variable
+                         t2.image, SymbolKind.Variable
                  )
          );
 
@@ -558,9 +555,26 @@ void Decl() throws YaplException :
 }
 
 void FormalParam() throws YaplException :
-{}
+{Token t;}
 {
-    Type() <ident>
+    Type() t=<ident> {
+        YaplSymbol symbol = (YaplSymbol) symbolTable.lookup(t.image);
+
+        if(symbol != null){
+            throw new YaplException(
+                      CompilerError.SymbolExists,
+                      t.beginLine,
+                      t.beginColumn
+            );
+        }
+
+        symbolTable.addSymbol(
+                new YaplSymbol(
+                        t.image, SymbolKind.Parameter
+                )
+        );
+
+    }
 }
 
 void FormalParamList() throws YaplException :
@@ -576,9 +590,13 @@ void Procedure() throws YaplException :
 
     String procName = name.image;
 
+    YaplSymbol procedureSymbol = new YaplSymbol(procName, SymbolKind.Procedure);
+
+    symbolTable.addSymbol(procedureSymbol);
+
     symbolTable.openScope();
     symbolTable.setParentSymbol(
-            new YaplSymbol(procName, SymbolKind.Procedure)
+            procedureSymbol
     );
 
     } <L_BRACKET> [ FormalParamList() ] <R_BRACKET> Block() endName=<ident> <SEMICOLON> {

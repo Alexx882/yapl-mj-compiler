@@ -49,6 +49,12 @@ public class SymbolTable implements Symboltable {
         scopes.peek().putSymbol(s.getName(), s);
     }
 
+    public void printSymbols() {
+        for(Scope s : scopes) {
+            System.out.println(s.getSymbolNames());
+        }
+    }
+
     @Override
     public Symbol lookup(String name) throws YaplException {
         if (name == null)
@@ -56,8 +62,6 @@ public class SymbolTable implements Symboltable {
                     CompilerError.Internal,
                     0, 0
             );
-
-        // TODO implement message
 
         for (int i = scopes.size() - 1; i >= 0; --i)
             if (scopes.elementAt(i).containsSymbol(name))
