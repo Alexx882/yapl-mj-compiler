@@ -1,5 +1,6 @@
 package yapl.impl;
 
+import jdk.jshell.spi.ExecutionControl;
 import yapl.interfaces.CompilerError;
 import yapl.interfaces.Symbol;
 import yapl.interfaces.Symboltable;
@@ -19,6 +20,7 @@ public class SymbolTable implements Symboltable {
     @Override
     public void openScope(boolean isGlobal) {
         if (isGlobal)
+            // todo check
             throw new IllegalStateException("No more global scopes allowed");
 
         scopes.push(new Scope(isGlobal));
@@ -33,6 +35,7 @@ public class SymbolTable implements Symboltable {
         scopes.pop();
     }
 
+    // todo check
     public void closeScope(String name) throws YaplException {
         Scope currentScope = scopes.pop();
 
@@ -46,24 +49,121 @@ public class SymbolTable implements Symboltable {
 
     @Override
     public void addSymbol(Symbol s) throws YaplException {
-        scopes.peek().putSymbol(s.getName(), s);
+        throw new UnsupportedOperationException("Use the overload with row and col instead.");
+    }
+
+    public void addSymbol(Symbol s, int row, int col) throws YaplException {
+        Scope curScope = scopes.peek();
+
+        if (curScope.containsSymbol(s.getName()))
+            throw new YaplException(CompilerError.SymbolExists, row, col);
+
+        curScope.putSymbol(s.getName(), s);
     }
 
     @Override
     public Symbol lookup(String name) throws YaplException {
-        if (name == null)
-            throw new YaplException(
-                    CompilerError.Internal,
-                    0, 0
-            );
+        throw new UnsupportedOperationException("Use the overload with row and col instead.");
+    }
 
-        // TODO implement message
+    public Symbol lookup(String name, int row, int col) throws YaplException {
+        if (name == null)
+            throw new YaplException(CompilerError.Internal, row, col);
 
         for (int i = scopes.size() - 1; i >= 0; --i)
             if (scopes.elementAt(i).containsSymbol(name))
                 return scopes.elementAt(i).getSymbol(name);
 
         return null;
+    }
+
+    /**
+     * Checks if the token is correctly declared, based on 3.2.1.
+     * @param name the name of the token
+     * @return
+     * @throws YaplException
+     */
+    public void checkCorrectDeclarationAsIdentifier(String name, int row, int col) throws YaplException {
+        Symbol s = this.lookup(name);
+
+        if (s == null)
+            throw new YaplException(CompilerError.IdentNotDecl, row, col);
+
+        switch (SymbolKind.find(s.getKind())){
+            case Variable:
+            case Constant:
+            case Typename:
+            case Procedure:
+            case Parameter:
+                return;
+
+            default:
+                throw new YaplException(CompilerError.IdentNotDecl, row, col);
+        }
+    }
+
+    public void checkCorrectDeclarationAsProcedure(String name, int row, int col) throws YaplException {
+        checkCorrectDeclarationAsIdentifier(name, row, col);
+
+        Symbol s = this.lookup(name);
+
+        if (SymbolKind.find(s.getKind()) != SymbolKind.Procedure)
+            throw new YaplException(CompilerError.SymbolIllegalUse, row, col);
+    }
+
+    public void checkCorrectDeclarationAsPrimaryExpression(String name, int row, int col) throws YaplException {
+        checkCorrectDeclarationAsIdentifier(name, row, col);
+
+        Symbol s = this.lookup(name);
+
+        switch (SymbolKind.find(s.getKind())){
+            case Variable:
+            case Constant:
+            case Parameter:
+                return;
+
+            default:
+                throw new YaplException(CompilerError.SymbolIllegalUse, row, col);
+        }
+    }
+
+    public void checkCorrectDeclarationAsTypeName(String name, int row, int col) throws YaplException {
+        checkCorrectDeclarationAsIdentifier(name, row, col);
+
+        Symbol s = this.lookup(name);
+
+        if (SymbolKind.find(s.getKind()) != SymbolKind.Typename)
+                throw new YaplException(CompilerError.SymbolIllegalUse, row, col);
+    }
+
+    public void checkCorrectDeclarationAsArray(String name, int row, int col) throws YaplException {
+        checkCorrectDeclarationAsIdentifier(name, row, col);
+
+        Symbol s = this.lookup(name);
+
+        switch (SymbolKind.find(s.getKind())){
+            case Variable:
+            case Parameter:
+                return;
+
+            default:
+                throw new YaplException(CompilerError.SymbolIllegalUse, row, col);
+        }
+    }
+
+    public void checkCorrectDeclarationAsLValue(String name, int row, int col) throws YaplException {
+        checkCorrectDeclarationAsIdentifier(name, row, col);
+
+        Symbol s = this.lookup(name);
+
+        switch (SymbolKind.find(s.getKind())){
+            case Variable:
+            case Parameter:
+                return;
+
+            default:
+                throw new YaplException(CompilerError.SymbolIllegalUse, row, col);
+        }
     }
 
     @Override
