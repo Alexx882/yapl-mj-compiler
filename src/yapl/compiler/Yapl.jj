@@ -171,7 +171,7 @@ void Program() throws YaplException :
     <PROGRAM> name=<ident> {
     progName=name.image;
 
-    symbolTable.openScope(true);
+    symbolTable.openScope();
     symbolTable.setParentSymbol(
             new YaplSymbol(progName, SymbolKind.Program)
     );

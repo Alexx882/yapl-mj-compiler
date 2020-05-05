@@ -18,6 +18,9 @@ public class SymbolTable implements Symboltable {
 
     @Override
     public void openScope(boolean isGlobal) {
+        if (isGlobal)
+            throw new IllegalStateException("No more global scopes allowed");
+
         scopes.push(new Scope(isGlobal));
     }
 
@@ -88,7 +91,7 @@ public class SymbolTable implements Symboltable {
      * @return the scope
      */
     private static Scope getYaplPredefinedScope() {
-        Scope predefScope = new Scope();
+        Scope predefScope = new Scope(true);
 
         for (String procedureName : new String[]{"writeint", "writebool", "writeln", "readint"})
             predefScope.putSymbol(procedureName, new YaplSymbol(procedureName, SymbolKind.Procedure));
