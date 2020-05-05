@@ -460,16 +460,70 @@ void ReturnType() :
     <VOID> | Type()
 }
 
+// declares a constant in the current scope
+// f.e.: Const len = 10;
+// throws an exception if the identifier already exists
 void ConstDecl() :
-{}
+{Token t;}
 {
-    <CONST> <ident> <CONST_ASSIGN> Literal() <SEMICOLON>
+    <CONST> t=<ident> {
+        YaplSymbol symbol = (YaplSymbol) symbolTable.lookup(t.image);
+
+        if(symbol != null)
+            throw new YaplException(
+                      CompilerError.SymbolExists,
+                      t.beginLine,
+                      t.beginColumn
+            );
+
+        symbolTable.addSymbol(
+                new YaplSymbol(
+                        t.image, SymbolKind.Constant
+                )
+        );
+
+    } <CONST_ASSIGN> Literal() <SEMICOLON>
 }
 
+// declares a constant in the current scope
+// f.e.: someWeirdNumber = 10;
+// throws an exception if the identifier already exists
 void VarDecl() :
-{}
+{Token t, t2;}
 {
-    Type() <ident> ( <COMMA> <ident> )* <SEMICOLON>
+    Type() t=<ident> {
+         YaplSymbol symbol = (YaplSymbol) symbolTable.lookup(t.image);
+
+         if(symbol != null)
+             throw new YaplException(
+                       CompilerError.SymbolExists,
+                       t.beginLine,
+                       t.beginColumn
+             );
+
+         symbolTable.addSymbol(
+                 new YaplSymbol(
+                         t.image, SymbolKind.Variable
+                 )
+         );
+
+     } ( <COMMA> t2=<ident> {
+         YaplSymbol symbol = (YaplSymbol) symbolTable.lookup(t.image);
+
+         if(symbol != null)
+             throw new YaplException(
+                       CompilerError.SymbolExists,
+                       t.beginLine,
+                       t.beginColumn
+             );
+
+         symbolTable.addSymbol(
+                 new YaplSymbol(
+                         t.image, SymbolKind.Variable
+                 )
+         );
+
+     } )* <SEMICOLON>
 }
 
 void TypeDecl() :
