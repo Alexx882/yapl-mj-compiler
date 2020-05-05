@@ -174,8 +174,8 @@ void Program() throws YaplException :
     symbolTable.openScope();
 
     YaplSymbol symbol = new YaplSymbol(progName, SymbolKind.Program);
-
     symbolTable.setParentSymbol(symbol);
+
 } ( Decl() | Procedure() )* <BEGIN> StatementList() <END> endName=<ident> <DOT> {
     symbolTable.closeScope(endName.image, true, endName.beginLine, endName.beginColumn);
     } <EOF>
@@ -388,15 +388,16 @@ void StatementList() throws YaplException :
 void Block() throws YaplException :
 {}
 {
+    { symbolTable.openScope(); }
     [ Decl() ] <BEGIN> StatementList() <END>
+    { symbolTable.closeScope(); }
 }
 
 void NonArrayType() throws YaplException :
 {Token t;}
 {
-    <INT> | <BOOL> | t=<ident> {
-        symbolTable.checkCorrectDeclarationAsTypeName(t.image, t.beginLine, t.beginColumn);
-    }
+    <INT> | <BOOL> | t=<ident>
+    { symbolTable.checkCorrectDeclarationAsTypeName(t.image, t.beginLine, t.beginColumn); }
 }
 
 void Type() throws YaplException :
@@ -469,7 +470,7 @@ void TypeDecl() throws YaplException :
                  ),
                  t.beginLine,
                  t.beginColumn
-         );
+        );
 
     } VarDecl() ( VarDecl() )* <ENDRECORD> <SEMICOLON> {
         symbolTable.closeScope();
@@ -492,7 +493,7 @@ void FormalParam() throws YaplException :
                  ),
                  t.beginLine,
                  t.beginColumn
-         );
+        );
     }
 }
 
@@ -505,18 +506,14 @@ void FormalParamList() throws YaplException :
 void Procedure() throws YaplException :
 {Token name, endName;}
 {
-    <PROCEDURE> ReturnType() name=<ident> {
-
-    String procName = name.image;
-
-    YaplSymbol procedureSymbol = new YaplSymbol(procName, SymbolKind.Procedure);
+    <PROCEDURE> ReturnType() name=<ident>
+    {
     symbolTable.openScope(
-             procedureSymbol,
+             new YaplSymbol(name.image, SymbolKind.Procedure),
              name.beginLine,
              name.beginColumn
-     );
-
-    } <L_BRACKET> [ FormalParamList() ] <R_BRACKET> Block() endName=<ident> <SEMICOLON> {
-        symbolTable.closeScope(endName.image, false, endName.beginLine, endName.beginColumn);
+    );
     }
+    <L_BRACKET> [ FormalParamList() ] <R_BRACKET> Block() endName=<ident> <SEMICOLON>
+    { symbolTable.closeScope(endName.image, false, endName.beginLine, endName.beginColumn); }
 }

@@ -30,6 +30,14 @@ public class SymbolTable implements Symboltable {
         openScope(false);
     }
 
+    /**
+     * Opens a new scope with the given symbol as parent. The parent symbol gets added to the OUTER scope.
+     *
+     * @param parentSymbol
+     * @param row
+     * @param col
+     * @throws YaplException
+     */
     public void openScope(YaplSymbol parentSymbol, int row, int col) throws YaplException {
         addSymbol(parentSymbol, row, col);
 

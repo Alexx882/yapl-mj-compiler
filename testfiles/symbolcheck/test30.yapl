@@ -1,0 +1,31 @@
+/* Symbol check test input.
+ * <expected result> ERROR 12 (line 19, column 5)
+ * illegal use of parameter 'b2'
+ */
+Program test22
+Declare
+    int b;
+
+Record Node
+    int id;
+    Node secondNode;
+EndRecord;
+
+Procedure bool func(int k, bool b1, bool b2)
+Declare
+    bool b;            /* hides global variable b */
+Begin
+    b := b1 And b2;
+    b2();
+End func;
+
+Procedure bool func2(int k, bool b1, bool b2)
+Declare
+    bool b;            /* hides global variable b */
+Begin
+    b := b1 And b2;
+    b2();
+End func2;
+
+Begin
+End test22.
