@@ -34,10 +34,6 @@ public class YaplSymbol implements yapl.interfaces.Symbol {
         return name;
     }
 
-    public YaplSymbol(String name) {
-        this.name = name;
-    }
-
     public YaplSymbol(String name, SymbolKind kind) {
         this.kind = kind;
         this.name = name;

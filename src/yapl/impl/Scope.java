@@ -10,6 +10,10 @@ public class Scope {
     public final boolean isGlobal;
     public Symbol parentSymbol;
 
+    public Scope() {
+        this(false);
+    }
+
     public Scope(boolean isGlobal) {
         this.isGlobal = isGlobal;
     }

@@ -12,6 +12,10 @@ public class SymbolTable implements Symboltable {
     Stack<Scope> scopes = new Stack<>();
     boolean isInDebugMode = false;
 
+    public SymbolTable(){
+        scopes.push(getYaplPredefinedScope());
+    }
+
     @Override
     public void openScope(boolean isGlobal) {
         scopes.push(new Scope(isGlobal));
@@ -77,5 +81,18 @@ public class SymbolTable implements Symboltable {
     @Override
     public void setDebug(boolean on) {
         this.isInDebugMode = on;
+    }
+
+    /**
+     * Creates a new scope containing the predefined procedures from the YAPL syntax.
+     * @return the scope
+     */
+    private static Scope getYaplPredefinedScope() {
+        Scope predefScope = new Scope();
+
+        for (String procedureName : new String[]{"writeint", "writebool", "writeln", "readint"})
+            predefScope.putSymbol(procedureName, new YaplSymbol(procedureName, SymbolKind.Procedure));
+
+        return predefScope;
     }
 }
