@@ -4,6 +4,7 @@ import yapl.interfaces.CompilerError;
 import yapl.interfaces.Symbol;
 import yapl.interfaces.Symboltable;
 import yapl.lib.YaplException;
+import yapl.lib.YaplExceptionArgs;
 
 import java.util.*;
 
@@ -12,7 +13,7 @@ public class SymbolTable implements Symboltable {
     Stack<Scope> scopes = new Stack<>();
     boolean isInDebugMode = false;
 
-    public SymbolTable(){
+    public SymbolTable() {
         scopes.push(getYaplPredefinedScope());
     }
 
@@ -34,16 +35,21 @@ public class SymbolTable implements Symboltable {
         scopes.pop();
     }
 
-    // todo check
-    public void closeScope(String name) throws YaplException {
+    /**
+     * Closes a named scope.
+     *
+     * @param name      The name of the scope at the end
+     * @param isProgram True, if the scope was for a program
+     * @param row
+     * @param col
+     * @throws YaplException
+     */
+    public void closeScope(String name, boolean isProgram, int row, int col) throws YaplException {
         Scope currentScope = scopes.pop();
+        String startName = currentScope.getParentSymbol().getName();
 
-        if (!currentScope.getParentSymbol().getName().equals(name))
-            throw new YaplException(
-                    CompilerError.EndIdentMismatch,
-                    0,
-                    0
-            );
+        if (!startName.equals(name))
+            throw new YaplException(CompilerError.EndIdentMismatch, row, col, new YaplExceptionArgs(isProgram, startName, name));
     }
 
     @Override
@@ -55,13 +61,13 @@ public class SymbolTable implements Symboltable {
         Scope curScope = scopes.peek();
 
         if (curScope.containsSymbol(s.getName()))
-            throw new YaplException(CompilerError.SymbolExists, row, col);
+            throw new YaplException(CompilerError.SymbolExists, row, col, new YaplExceptionArgs(s.getName(), s.getKindString()));
 
         curScope.putSymbol(s.getName(), s);
     }
 
     public void printSymbols() {
-        for(Scope s : scopes) {
+        for (Scope s : scopes) {
             System.out.println(s.getSymbolNames());
         }
     }
@@ -71,9 +77,9 @@ public class SymbolTable implements Symboltable {
         throw new UnsupportedOperationException("Use the overload with row and col instead.");
     }
 
-    public Symbol lookup(String name, int row, int col) throws YaplException {
+    public Symbol lookup(String name, int row, int col) {
         if (name == null)
-            throw new YaplException(CompilerError.Internal, row, col);
+            throw new IllegalArgumentException("name must not be null");
 
         for (int i = scopes.size() - 1; i >= 0; --i)
             if (scopes.elementAt(i).containsSymbol(name))
@@ -84,6 +90,7 @@ public class SymbolTable implements Symboltable {
 
     /**
      * Checks if the token is correctly declared, based on 3.2.1.
+     *
      * @param name the name of the token
      * @return
      * @throws YaplException
@@ -92,9 +99,9 @@ public class SymbolTable implements Symboltable {
         Symbol s = this.lookup(name, row, col);
 
         if (s == null)
-            throw new YaplException(CompilerError.IdentNotDecl, row, col);
+            throw new YaplException(CompilerError.IdentNotDecl, row, col, new YaplExceptionArgs(name));
 
-        switch (SymbolKind.find(s.getKind())){
+        switch (SymbolKind.find(s.getKind())) {
             case Variable:
             case Constant:
             case Typename:
@@ -103,7 +110,7 @@ public class SymbolTable implements Symboltable {
                 return;
 
             default:
-                throw new YaplException(CompilerError.IdentNotDecl, row, col);
+                throw new YaplException(CompilerError.IdentNotDecl, row, col, new YaplExceptionArgs(name));
         }
     }
 
@@ -113,7 +120,7 @@ public class SymbolTable implements Symboltable {
         Symbol s = this.lookup(name, row, col);
 
         if (SymbolKind.find(s.getKind()) != SymbolKind.Procedure)
-            throw new YaplException(CompilerError.SymbolIllegalUse, row, col);
+            throw new YaplException(CompilerError.SymbolIllegalUse, row, col, new YaplExceptionArgs(name, s.getKindString()));
     }
 
     public void checkCorrectDeclarationAsPrimaryExpression(String name, int row, int col) throws YaplException {
@@ -121,14 +128,14 @@ public class SymbolTable implements Symboltable {
 
         Symbol s = this.lookup(name, row, col);
 
-        switch (SymbolKind.find(s.getKind())){
+        switch (SymbolKind.find(s.getKind())) {
             case Variable:
             case Constant:
             case Parameter:
                 return;
 
             default:
-                throw new YaplException(CompilerError.SymbolIllegalUse, row, col);
+                throw new YaplException(CompilerError.SymbolIllegalUse, row, col, new YaplExceptionArgs(name, s.getKindString()));
         }
     }
 
@@ -138,7 +145,7 @@ public class SymbolTable implements Symboltable {
         Symbol s = this.lookup(name, row, col);
 
         if (SymbolKind.find(s.getKind()) != SymbolKind.Typename)
-                throw new YaplException(CompilerError.SymbolIllegalUse, row, col);
+            throw new YaplException(CompilerError.SymbolIllegalUse, row, col, new YaplExceptionArgs(name, s.getKindString()));
     }
 
     public void checkCorrectDeclarationAsArray(String name, int row, int col) throws YaplException {
@@ -146,13 +153,13 @@ public class SymbolTable implements Symboltable {
 
         Symbol s = this.lookup(name, row, col);
 
-        switch (SymbolKind.find(s.getKind())){
+        switch (SymbolKind.find(s.getKind())) {
             case Variable:
             case Parameter:
                 return;
 
             default:
-                throw new YaplException(CompilerError.SymbolIllegalUse, row, col);
+                throw new YaplException(CompilerError.SymbolIllegalUse, row, col, new YaplExceptionArgs(name, s.getKindString()));
         }
     }
 
@@ -161,13 +168,13 @@ public class SymbolTable implements Symboltable {
 
         Symbol s = this.lookup(name, row, col);
 
-        switch (SymbolKind.find(s.getKind())){
+        switch (SymbolKind.find(s.getKind())) {
             case Variable:
             case Parameter:
                 return;
 
             default:
-                throw new YaplException(CompilerError.SymbolIllegalUse, row, col);
+                throw new YaplException(CompilerError.SymbolIllegalUse, row, col, new YaplExceptionArgs(name, s.getKindString()));
         }
     }
 
@@ -193,6 +200,7 @@ public class SymbolTable implements Symboltable {
 
     /**
      * Creates a new scope containing the predefined procedures from the YAPL syntax.
+     *
      * @return the scope
      */
     private static Scope getYaplPredefinedScope() {
