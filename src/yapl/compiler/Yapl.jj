@@ -235,12 +235,10 @@ void ArrayLen() :
     <ARR_LEN> <ident> [ Selector() ]
 }
 
-// LL1 // prefix <ident> was extracted here
 void PrimaryExpr() :
 {}
 {
-//  Literal() | <L_BRACKET> Expr() <R_BRACKET> | <ident> ( ProcedureArguments() |         [ Selector() ]) | ArrayLen() // LL1
-    Literal() | <L_BRACKET> Expr() <R_BRACKET> | LOOKAHEAD(2) ProcedureCall() | <ident> [ Selector() ] | ArrayLen() // LL2
+    Literal() | <L_BRACKET> Expr() <R_BRACKET> | LOOKAHEAD(2) ProcedureCall() | <ident> [ Selector() ] | ArrayLen()
 }
 
 void UnaryExpr() :
@@ -297,27 +295,16 @@ void ArgumentList() :
     Expr() ( <COMMA> Expr() )*
 }
 
-// LL1 // this production was created to extract the <ident> prefix from ProcedureCall()
-//void ProcedureArguments() :
-//{}
-//{
-//    <L_BRACKET> [ ArgumentList() ] <R_BRACKET> // LL1
-//}
-
-// LL1 // this production is unused, as the prefix was extracted in Statement() and PrimaryExpr()
 void ProcedureCall() :
 {}
 {
-//  <ident>    ProcedureArguments()    // LL1
-    <ident> <L_BRACKET> [ ArgumentList() ] <R_BRACKET> // LL2
+    <ident> <L_BRACKET> [ ArgumentList() ] <R_BRACKET>
 }
 
-// LL1 // the prefix <ident> was extracted from this production into Statement()
 void Assignment() :
 {}
 {
-//          [ Selector() ] <ASSIGN> Expr() // LL1
-    <ident> [ Selector() ] <ASSIGN> Expr() // LL2
+    <ident> [ Selector() ] <ASSIGN> Expr()
 }
 
 void IfStatement() :
@@ -347,8 +334,7 @@ void WriteStatement() :
 void Statement() :
 {}
 {
-//  IfStatement() | WhileStatement() | ReturnStatement() | WriteStatement() | <ident> ( Assignment() | ProcedureArguments() ) | Block() // LL1
-    IfStatement() | WhileStatement() | ReturnStatement() | WriteStatement() | LOOKAHEAD(2) Assignment() | ProcedureCall() | Block() // LL2
+    IfStatement() | WhileStatement() | ReturnStatement() | WriteStatement() | LOOKAHEAD(2) Assignment() | ProcedureCall() | Block()
 }
 
 void StatementList() :
