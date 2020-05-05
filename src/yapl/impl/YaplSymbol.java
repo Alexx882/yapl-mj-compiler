@@ -19,6 +19,10 @@ public class YaplSymbol implements yapl.interfaces.Symbol {
         return kind.kind;
     }
 
+    public SymbolKind getSymbolKind() {
+        return kind;
+    }
+
     @Override
     public void setKind(int kind) {
         this.kind = SymbolKind.find(kind);
@@ -108,4 +112,6 @@ public class YaplSymbol implements yapl.interfaces.Symbol {
     public void setReturnSeen(boolean seen) {
         this.returnSeen = seen;
     }
+
+
 }
