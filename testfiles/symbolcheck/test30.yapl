@@ -1,6 +1,5 @@
 /* Symbol check test input.
- * <expected result> ERROR 12 (line 19, column 5)
- * illegal use of parameter 'b2'
+ * <expected result> OK
  */
 Program test22
 Declare
@@ -16,7 +15,6 @@ Declare
     bool b;            /* hides global variable b */
 Begin
     b := b1 And b2;
-    b2();
 End func;
 
 Procedure bool func2(int k, bool b1, bool b2)
@@ -24,8 +22,8 @@ Declare
     bool b;            /* hides global variable b */
 Begin
     b := b1 And b2;
-    b2();
 End func2;
 
 Begin
+    writeln();
 End test22.
