@@ -250,16 +250,39 @@ void Literal() :
     <TRUE> | <FALSE> | <number>
 }
 
+// used to access properties of records.
+// f.e.: someRecord.someProperty
 void Selector() :
 {}
 {
     ( <L_SQ_BRACKET> Expr() <R_SQ_BRACKET> | <DOT> <ident> ) [ Selector() ]
 }
 
+// retrieves the length of an array.
+// throws an exception if the identifier is not found
+// throws an exception if the "#" operator is applied to a non-array
+// f.e.: #someArray
 void ArrayLen() :
-{}
+{Token t;}
 {
-    <ARR_LEN> <ident> [ Selector() ]
+    <ARR_LEN> t=<ident> {
+        String symbolName = t.image;
+        YaplSymbol symbol = (YaplSymbol) symbolTable.lookup(symbolName);
+
+        if(symbol == null)
+            throw new YaplException(
+                    CompilerError.IdentNotDecl,
+                    t.beginLine,
+                    t.beginColumn
+            );
+
+        if(symbol.getSymbolKind() != SymbolKind.Field)
+            throw new YaplException(
+                                CompilerError.ArrayLenNotArray,
+                                t.beginLine,
+                                t.beginColumn
+                        );
+    } [ Selector() ]
 }
 
 void PrimaryExpr() :
@@ -322,16 +345,59 @@ void ArgumentList() :
     Expr() ( <COMMA> Expr() )*
 }
 
+// calls a procedure
+// f.e.: someProcedure()
+// throws an exception if the identifier is not found
 void ProcedureCall() :
-{}
+{Token t;}
 {
-    <ident> <L_BRACKET> [ ArgumentList() ] <R_BRACKET>
+    t=<ident> {
+        String symbolName = t.image;
+        YaplSymbol symbol = (YaplSymbol) symbolTable.lookup(symbolName);
+
+        if(symbol == null)
+            throw new YaplException(
+                    CompilerError.IdentNotDecl,
+                    t.beginLine,
+                    t.beginColumn
+            );
+
+        if(symbol.getSymbolKind() != SymbolKind.Procedure)
+            throw new YaplException(
+                                CompilerError.SymbolIllegalUse,
+                                t.beginLine,
+                                t.beginColumn
+                        );
+    } <L_BRACKET> [ ArgumentList() ] <R_BRACKET>
 }
 
+// assigns a value to an identifier
+// f.e.: a := 7;
+// throws an exception if the identifier is not found
+// throws an exception if the identifier cannot be written to e.g. it is a procedure
 void Assignment() :
-{}
+{Token t;}
 {
-    <ident> [ Selector() ] <ASSIGN> Expr()
+    t=<ident> {
+          String symbolName = t.image;
+          YaplSymbol symbol = (YaplSymbol) symbolTable.lookup(symbolName);
+
+          if(symbol == null)
+              throw new YaplException(
+                      CompilerError.IdentNotDecl,
+                      t.beginLine,
+                      t.beginColumn
+              );
+
+          if(symbol.getSymbolKind() == SymbolKind.Program ||  symbol.getSymbolKind() == SymbolKind.Procedure
+              || symbol.getSymbolKind() == SymbolKind.Constant || symbol.getSymbolKind() == SymbolKind.Typename
+              || symbol.getSymbolKind() == SymbolKind.Paramter)
+              throw new YaplException(
+                                  CompilerError.SymbolIllegalUse,
+                                  t.beginLine,
+                                  t.beginColumn
+                          );
+      } [ Selector() ] <ASSIGN> Expr()
 }
 
 void IfStatement() :
