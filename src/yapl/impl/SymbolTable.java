@@ -61,6 +61,12 @@ public class SymbolTable implements Symboltable {
         curScope.putSymbol(s.getName(), s);
     }
 
+    public void printSymbols() {
+        for(Scope s : scopes) {
+            System.out.println(s.getSymbolNames());
+        }
+    }
+
     @Override
     public Symbol lookup(String name) throws YaplException {
         throw new UnsupportedOperationException("Use the overload with row and col instead.");

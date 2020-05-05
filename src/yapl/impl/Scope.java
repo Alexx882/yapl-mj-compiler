@@ -3,7 +3,10 @@ package yapl.impl;
 import yapl.interfaces.Symbol;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Scope {
     public final Map<String, Symbol> symbols = new HashMap<>();
@@ -36,5 +39,9 @@ public class Scope {
 
     public boolean containsSymbol(String name) {
         return symbols.containsKey(name);
+    }
+
+    public Set<String> getSymbolNames() {
+        return symbols.values().stream().map(Symbol::getName).collect(Collectors.toSet());
     }
 }
