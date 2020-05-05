@@ -30,6 +30,13 @@ public class SymbolTable implements Symboltable {
         openScope(false);
     }
 
+    public void openScope(YaplSymbol parentSymbol, int row, int col) throws YaplException {
+        addSymbol(parentSymbol, row, col);
+
+        openScope();
+        setParentSymbol(parentSymbol);
+    }
+
     @Override
     public void closeScope() {
         scopes.pop();
@@ -59,6 +66,9 @@ public class SymbolTable implements Symboltable {
 
     public void addSymbol(Symbol s, int row, int col) throws YaplException {
         Scope curScope = scopes.peek();
+
+        if (curScope.getParentSymbol() != null && SymbolKind.find(curScope.getParentSymbol().getKind()) == SymbolKind.Typename)
+            s.setKind(SymbolKind.Field.kind);
 
         if (curScope.containsSymbol(s.getName()))
             throw new YaplException(CompilerError.SymbolExists, row, col, new YaplExceptionArgs(s.getName(), s.getKindString()));

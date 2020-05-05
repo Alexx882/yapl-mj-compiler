@@ -177,16 +177,7 @@ void Program() throws YaplException :
 
     symbolTable.setParentSymbol(symbol);
 } ( Decl() | Procedure() )* <BEGIN> StatementList() <END> endName=<ident> <DOT> {
-
-    if(!name.image.equals(endName.image)) {
-        throw new YaplException(
-                CompilerError.EndIdentMismatch,
-                endName.beginLine,
-                endName.beginColumn
-        );
-    }
-
-    symbolTable.closeScope();
+    symbolTable.closeScope(endName.image, true, endName.beginLine, endName.beginColumn);
     } <EOF>
 }
 
@@ -271,9 +262,12 @@ void ArrayLen() throws YaplException :
 }
 
 void PrimaryExpr() throws YaplException :
-{}
+{Token t;}
 {
-    Literal() | <L_BRACKET> Expr() <R_BRACKET> | LOOKAHEAD(2) ProcedureCall() | <ident> [ Selector() ] | ArrayLen()
+    Literal() | <L_BRACKET> Expr() <R_BRACKET> | LOOKAHEAD(2) ProcedureCall() | t=<ident> {
+        String symbolName = t.image;
+        symbolTable.checkCorrectDeclarationAsPrimaryExpression(symbolName, t.beginLine, t.beginColumn);
+    } [ Selector() ] | ArrayLen()
 }
 
 void UnaryExpr() throws YaplException :
@@ -398,9 +392,11 @@ void Block() throws YaplException :
 }
 
 void NonArrayType() throws YaplException :
-{}
+{Token t;}
 {
-    <INT> | <BOOL> | <ident>
+    <INT> | <BOOL> | t=<ident> {
+        symbolTable.checkCorrectDeclarationAsTypeName(t.image, t.beginLine, t.beginColumn);
+    }
 }
 
 void Type() throws YaplException :
@@ -460,14 +456,14 @@ void VarDecl() throws YaplException :
      } )* <SEMICOLON>
 }
 
-// declares a constant in the current scope
-// f.e.: someWeirdNumber = 10;
+// declares a Record in the current scope
+// as in : RECORD
 // throws an exception if the identifier already exists
 void TypeDecl() throws YaplException :
 {Token t;}
 {
     <RECORD> t=<ident> {
-        symbolTable.addSymbol(
+        symbolTable.openScope(
                  new YaplSymbol(
                          t.image, SymbolKind.Typename
                  ),
@@ -475,7 +471,9 @@ void TypeDecl() throws YaplException :
                  t.beginColumn
          );
 
-    } VarDecl() ( VarDecl() )* <ENDRECORD> <SEMICOLON>
+    } VarDecl() ( VarDecl() )* <ENDRECORD> <SEMICOLON> {
+        symbolTable.closeScope();
+    }
 }
 
 void Decl() throws YaplException :
@@ -512,26 +510,13 @@ void Procedure() throws YaplException :
     String procName = name.image;
 
     YaplSymbol procedureSymbol = new YaplSymbol(procName, SymbolKind.Procedure);
-
-    symbolTable.addSymbol(
+    symbolTable.openScope(
              procedureSymbol,
              name.beginLine,
              name.beginColumn
      );
 
-    symbolTable.openScope();
-    symbolTable.setParentSymbol(procedureSymbol);
-
     } <L_BRACKET> [ FormalParamList() ] <R_BRACKET> Block() endName=<ident> <SEMICOLON> {
-
-    if(!procName.equals(endName.image)) {
-            throw new YaplException(
-                    CompilerError.EndIdentMismatch,
-                    endName.beginLine,
-                    endName.beginColumn
-            );
-        }
-
-        symbolTable.closeScope();
+        symbolTable.closeScope(endName.image, false, endName.beginLine, endName.beginColumn);
     }
 }
