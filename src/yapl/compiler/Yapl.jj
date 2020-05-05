@@ -1,4 +1,3 @@
-//noinspection UnusedProduction
 options {
     LOOKAHEAD = 1;
     CHOICE_AMBIGUITY_CHECK = 2;
