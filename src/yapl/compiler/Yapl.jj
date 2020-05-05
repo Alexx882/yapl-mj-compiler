@@ -26,7 +26,9 @@ package yapl.compiler;
 import yapl.impl.SymbolKind;
 import yapl.impl.SymbolTable;
 import yapl.impl.YaplSymbol;
+import yapl.interfaces.CompilerError;
 import yapl.lib.CompilerMessage;
+import yapl.lib.YaplException;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -72,7 +74,7 @@ public class Yapl {
             else
                 Yapl.PrintTokens();
 
-        } catch (TokenMgrError | ParseException e) {
+        } catch (TokenMgrError | ParseException | YaplException e) {
             CompilerMessage.printError(e, progName);
         }
     }
@@ -162,6 +164,32 @@ TOKEN :
     < string: "\"" ([" ","a"-"z","A"-"Z","_","0"-"9",
                    "+","-","*","/",".",",",";",":","!","?","=","#","%","<",">","$",
                    "(",")","[","]","{","}","\\","@","&","^","|"])* "\"">
+}
+
+void Program() throws YaplException :
+{Token name, endName;}
+{
+    <PROGRAM> name=<ident> {
+    progName=name.image;
+
+    symbolTable.openScope(true);
+    symbolTable.setParentSymbol(
+            new YaplSymbol(progName, SymbolKind.Program)
+    );
+} ( Decl() | Procedure() )* <BEGIN> StatementList() <END> endName=<ident> <DOT> {
+
+    if(!name.image.equals(endName.image)) {
+        throw new YaplException(
+                CompilerError.EndIdentMismatch,
+                endName.beginLine,
+                endName.beginColumn
+        );
+    }
+
+
+    symbolTable.closeScope();
+
+    } <EOF>
 }
 
 void PrintTokens() :
@@ -403,20 +431,22 @@ void FormalParamList() :
     FormalParam() ( <COMMA> FormalParam() )*
 }
 
-void Procedure() :
+void Procedure() throws YaplException :
 {Token name, endName;}
 {
     <PROCEDURE> ReturnType() name=<ident> {
 
+    String procName = name.image;
+
     symbolTable.openScope();
     symbolTable.setParentSymbol(
-            new YaplSymbol(name, SymbolKind.Procedure)
+            new YaplSymbol(procName, SymbolKind.Procedure)
     );
 
     } <L_BRACKET> [ FormalParamList() ] <R_BRACKET> Block() endName=<ident> <SEMICOLON> {
 
-    if(!name.image.equals(endName.image)) {
-            throw new YAPLException(
+    if(!procName.equals(endName.image)) {
+            throw new YaplException(
                     CompilerError.EndIdentMismatch,
                     endName.beginLine,
                     endName.beginColumn
@@ -426,30 +456,4 @@ void Procedure() :
 
         symbolTable.closeScope();
     }
-}
-
-void Program() :
-{Token name, endName;}
-{
-    <PROGRAM> name=<ident> {
-    progName=name.image;
-
-    symbolTable.openScope(true);
-    symbolTable.setParentSymbol(
-            new YaplSymbol(progName, SymbolKind.Program)
-    );
-} ( Decl() | Procedure() )* <BEGIN> StatementList() <END> endName=<ident> <DOT> {
-
-    if(!name.image.equals(endName.image)) {
-        throw new YAPLException(
-                CompilerError.EndIdentMismatch,
-                endName.beginLine,
-                endName.beginColumn
-        );
-    }
-
-
-    symbolTable.closeScope();
-
-    } <EOF>
 }

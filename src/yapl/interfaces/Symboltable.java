@@ -1,6 +1,6 @@
 package yapl.interfaces;
 
-import yapl.lib.YAPLException;
+import yapl.lib.YaplException;
 
 /**
  * Interface to the symbol table of the YAPL compiler.
@@ -49,14 +49,14 @@ public interface Symboltable {
 	 * current scope.
 	 * 
 	 * @param s    <code>s</code> and <code>s.getName()</code> must not be <code>null</code>.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (SymbolExists) if a symbol of the same name already exists in
 	 *             the current scope.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (Internal) if the new symbol's name is <code>null</code>.
 	 * @see #openScope(boolean)
 	 */
-	public void addSymbol(Symbol s) throws YAPLException;
+	public void addSymbol(Symbol s) throws YaplException;
 
 	/**
 	 * Lookup a symbol in the stack of scopes. Symbols in an inner scope hide
@@ -64,10 +64,10 @@ public interface Symboltable {
 	 * 
 	 * @param name     must not be <code>null</code>.
 	 * @return <code>null</code> if a symbol of the given name does not exist.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (Internal) if <code>name</code> is <code>null</code>.
 	 */
-	public Symbol lookup(String name) throws YAPLException;
+	public Symbol lookup(String name) throws YaplException;
 
 	/**
 	 * Set the parent symbol of the current scope. If a parent symbol has

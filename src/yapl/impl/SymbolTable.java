@@ -3,8 +3,7 @@ package yapl.impl;
 import yapl.interfaces.CompilerError;
 import yapl.interfaces.Symbol;
 import yapl.interfaces.Symboltable;
-import yapl.lib.CompilerMessage;
-import yapl.lib.YAPLException;
+import yapl.lib.YaplException;
 
 import java.util.*;
 
@@ -27,11 +26,11 @@ public class SymbolTable implements Symboltable {
         scopes.pop();
     }
 
-    public void closeScope(String name) throws YAPLException {
+    public void closeScope(String name) throws YaplException {
         Scope currentScope = scopes.pop();
 
         if (!currentScope.getParentSymbol().getName().equals(name))
-            throw new YAPLException(
+            throw new YaplException(
                     CompilerError.EndIdentMismatch,
                     0,
                     0
@@ -39,14 +38,14 @@ public class SymbolTable implements Symboltable {
     }
 
     @Override
-    public void addSymbol(Symbol s) throws YAPLException {
+    public void addSymbol(Symbol s) throws YaplException {
         scopes.peek().putSymbol(s.getName(), s);
     }
 
     @Override
-    public Symbol lookup(String name) throws YAPLException {
+    public Symbol lookup(String name) throws YaplException {
         if (name == null)
-            throw new YAPLException(
+            throw new YaplException(
                     CompilerError.Internal,
                     0, 0
             );

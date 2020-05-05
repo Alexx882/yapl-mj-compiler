@@ -2,13 +2,13 @@ package yapl.lib;
 
 import yapl.interfaces.CompilerError;
 
-public class YAPLException extends Throwable implements CompilerError {
+public class YaplException extends Throwable implements CompilerError {
 
     private final int errorNumber;
     private final int line;
     private final int column;
 
-    public YAPLException(int errorNumber, int line, int column) {
+    public YaplException(int errorNumber, int line, int column) {
         this.errorNumber = errorNumber;
         this.line = line;
         this.column = column;
