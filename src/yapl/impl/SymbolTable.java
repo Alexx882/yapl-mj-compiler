@@ -1,6 +1,5 @@
 package yapl.impl;
 
-import jdk.jshell.spi.ExecutionControl;
 import yapl.interfaces.CompilerError;
 import yapl.interfaces.Symbol;
 import yapl.interfaces.Symboltable;
@@ -90,7 +89,7 @@ public class SymbolTable implements Symboltable {
      * @throws YaplException
      */
     public void checkCorrectDeclarationAsIdentifier(String name, int row, int col) throws YaplException {
-        Symbol s = this.lookup(name);
+        Symbol s = this.lookup(name, row, col);
 
         if (s == null)
             throw new YaplException(CompilerError.IdentNotDecl, row, col);
@@ -111,7 +110,7 @@ public class SymbolTable implements Symboltable {
     public void checkCorrectDeclarationAsProcedure(String name, int row, int col) throws YaplException {
         checkCorrectDeclarationAsIdentifier(name, row, col);
 
-        Symbol s = this.lookup(name);
+        Symbol s = this.lookup(name, row, col);
 
         if (SymbolKind.find(s.getKind()) != SymbolKind.Procedure)
             throw new YaplException(CompilerError.SymbolIllegalUse, row, col);
@@ -120,7 +119,7 @@ public class SymbolTable implements Symboltable {
     public void checkCorrectDeclarationAsPrimaryExpression(String name, int row, int col) throws YaplException {
         checkCorrectDeclarationAsIdentifier(name, row, col);
 
-        Symbol s = this.lookup(name);
+        Symbol s = this.lookup(name, row, col);
 
         switch (SymbolKind.find(s.getKind())){
             case Variable:
@@ -136,7 +135,7 @@ public class SymbolTable implements Symboltable {
     public void checkCorrectDeclarationAsTypeName(String name, int row, int col) throws YaplException {
         checkCorrectDeclarationAsIdentifier(name, row, col);
 
-        Symbol s = this.lookup(name);
+        Symbol s = this.lookup(name, row, col);
 
         if (SymbolKind.find(s.getKind()) != SymbolKind.Typename)
                 throw new YaplException(CompilerError.SymbolIllegalUse, row, col);
@@ -145,7 +144,7 @@ public class SymbolTable implements Symboltable {
     public void checkCorrectDeclarationAsArray(String name, int row, int col) throws YaplException {
         checkCorrectDeclarationAsIdentifier(name, row, col);
 
-        Symbol s = this.lookup(name);
+        Symbol s = this.lookup(name, row, col);
 
         switch (SymbolKind.find(s.getKind())){
             case Variable:
@@ -160,7 +159,7 @@ public class SymbolTable implements Symboltable {
     public void checkCorrectDeclarationAsLValue(String name, int row, int col) throws YaplException {
         checkCorrectDeclarationAsIdentifier(name, row, col);
 
-        Symbol s = this.lookup(name);
+        Symbol s = this.lookup(name, row, col);
 
         switch (SymbolKind.find(s.getKind())){
             case Variable:
