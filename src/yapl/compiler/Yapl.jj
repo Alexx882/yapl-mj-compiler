@@ -220,31 +220,31 @@ void PrintTokens() :
     <EOF >
 }
 
-void RelOp() :
+void RelOp() throws YaplException :
 {}
 {
     <LT> | <LE> | <GT> | <GE>
 }
 
-void EqualOp() :
+void EqualOp() throws YaplException :
 {}
 {
     <EQ> | <NE>
 }
 
-void AddOp() :
+void AddOp() throws YaplException :
 {}
 {
     <ADD> | <SUB>
 }
 
-void MulOp() :
+void MulOp() throws YaplException :
 {}
 {
     <MUL> | <DIV> | <MOD>
 }
 
-void Literal() :
+void Literal() throws YaplException :
 {}
 {
     <TRUE> | <FALSE> | <number>
@@ -252,7 +252,7 @@ void Literal() :
 
 // used to access properties of records.
 // f.e.: someRecord.someProperty
-void Selector() :
+void Selector() throws YaplException :
 {}
 {
     ( <L_SQ_BRACKET> Expr() <R_SQ_BRACKET> | <DOT> <ident> ) [ Selector() ]
@@ -262,7 +262,7 @@ void Selector() :
 // throws an exception if the identifier is not found
 // throws an exception if the "#" operator is applied to a non-array
 // f.e.: #someArray
-void ArrayLen() :
+void ArrayLen() throws YaplException :
 {Token t;}
 {
     <ARR_LEN> t=<ident> {
@@ -285,61 +285,61 @@ void ArrayLen() :
     } [ Selector() ]
 }
 
-void PrimaryExpr() :
+void PrimaryExpr() throws YaplException :
 {}
 {
     Literal() | <L_BRACKET> Expr() <R_BRACKET> | LOOKAHEAD(2) ProcedureCall() | <ident> [ Selector() ] | ArrayLen()
 }
 
-void UnaryExpr() :
+void UnaryExpr() throws YaplException :
 {}
 {
     [ AddOp() ] PrimaryExpr()
 }
 
-void MulExpr() :
+void MulExpr() throws YaplException :
 {}
 {
     UnaryExpr() ( MulOp() UnaryExpr() )*
 }
 
-void AddExpr() :
+void AddExpr() throws YaplException :
 {}
 {
     MulExpr() ( AddOp() MulExpr() )*
 }
 
-void RelExpr() :
+void RelExpr() throws YaplException :
 {}
 {
     AddExpr() [ RelOp() AddExpr() ]
 }
 
-void EqualExpr() :
+void EqualExpr() throws YaplException :
 {}
 {
     RelExpr() [ EqualOp() RelExpr() ]
 }
 
-void CondAndExpr() :
+void CondAndExpr() throws YaplException :
 {}
 {
     EqualExpr() ( <AND> EqualExpr() )*
 }
 
-void CreationExpr() :
+void CreationExpr() throws YaplException :
 {}
 {
     <NEW> NonArrayType() ( <L_SQ_BRACKET> Expr() <R_SQ_BRACKET> )*
 }
 
-void Expr() :
+void Expr() throws YaplException :
 {}
 {
     CondAndExpr() ( <OR> CondAndExpr() )* | CreationExpr()
 }
 
-void ArgumentList() :
+void ArgumentList() throws YaplException :
 {}
 {
     Expr() ( <COMMA> Expr() )*
@@ -348,7 +348,7 @@ void ArgumentList() :
 // calls a procedure
 // f.e.: someProcedure()
 // throws an exception if the identifier is not found
-void ProcedureCall() :
+void ProcedureCall() throws YaplException :
 {Token t;}
 {
     t=<ident> {
@@ -375,7 +375,7 @@ void ProcedureCall() :
 // f.e.: a := 7;
 // throws an exception if the identifier is not found
 // throws an exception if the identifier cannot be written to e.g. it is a procedure
-void Assignment() :
+void Assignment() throws YaplException :
 {Token t;}
 {
     t=<ident> {
@@ -391,7 +391,7 @@ void Assignment() :
 
           if(symbol.getSymbolKind() == SymbolKind.Program ||  symbol.getSymbolKind() == SymbolKind.Procedure
               || symbol.getSymbolKind() == SymbolKind.Constant || symbol.getSymbolKind() == SymbolKind.Typename
-              || symbol.getSymbolKind() == SymbolKind.Paramter)
+              || symbol.getSymbolKind() == SymbolKind.Parameter)
               throw new YaplException(
                                   CompilerError.SymbolIllegalUse,
                                   t.beginLine,
@@ -400,61 +400,61 @@ void Assignment() :
       } [ Selector() ] <ASSIGN> Expr()
 }
 
-void IfStatement() :
+void IfStatement() throws YaplException :
 {}
 {
     <IF> Expr() <THEN> StatementList() [ <ELSE> StatementList() ] <ENDIF>
 }
 
-void WhileStatement() :
+void WhileStatement() throws YaplException :
 {}
 {
     <WHILE> Expr() <DO> StatementList() <ENDWHILE>
 }
 
-void ReturnStatement() :
+void ReturnStatement() throws YaplException :
 {}
 {
     <RETURN> [ Expr() ]
 }
 
-void WriteStatement() :
+void WriteStatement() throws YaplException :
 {}
 {
     <WRITE> <string>
 }
 
-void Statement() :
+void Statement() throws YaplException :
 {}
 {
     IfStatement() | WhileStatement() | ReturnStatement() | WriteStatement() | LOOKAHEAD(2) Assignment() | ProcedureCall() | Block()
 }
 
-void StatementList() :
+void StatementList() throws YaplException :
 {}
 {
     ( Statement() <SEMICOLON> )*
 }
 
-void Block() :
+void Block() throws YaplException :
 {}
 {
     [ Decl() ] <BEGIN> StatementList() <END>
 }
 
-void NonArrayType() :
+void NonArrayType() throws YaplException :
 {}
 {
     <INT> | <BOOL> | <ident>
 }
 
-void Type() :
+void Type() throws YaplException :
 {}
 {
     NonArrayType() ( <L_SQ_BRACKET> <R_SQ_BRACKET> )*
 }
 
-void ReturnType() :
+void ReturnType() throws YaplException :
 {}
 {
     <VOID> | Type()
@@ -463,7 +463,7 @@ void ReturnType() :
 // declares a constant in the current scope
 // f.e.: Const len = 10;
 // throws an exception if the identifier already exists
-void ConstDecl() :
+void ConstDecl() throws YaplException :
 {Token t;}
 {
     <CONST> t=<ident> {
@@ -488,7 +488,7 @@ void ConstDecl() :
 // declares a constant in the current scope
 // f.e.: someWeirdNumber = 10;
 // throws an exception if the identifier already exists
-void VarDecl() :
+void VarDecl() throws YaplException :
 {Token t, t2;}
 {
     Type() t=<ident> {
@@ -508,9 +508,9 @@ void VarDecl() :
          );
 
      } ( <COMMA> t2=<ident> {
-         YaplSymbol symbol = (YaplSymbol) symbolTable.lookup(t.image);
+         YaplSymbol symbol2 = (YaplSymbol) symbolTable.lookup(t.image);
 
-         if(symbol != null)
+         if(symbol2 != null)
              throw new YaplException(
                        CompilerError.SymbolExists,
                        t.beginLine,
@@ -526,25 +526,44 @@ void VarDecl() :
      } )* <SEMICOLON>
 }
 
-void TypeDecl() :
-{}
+// declares a constant in the current scope
+// f.e.: someWeirdNumber = 10;
+// throws an exception if the identifier already exists
+void TypeDecl() throws YaplException :
+{Token t;}
 {
-    <RECORD> <ident> VarDecl() ( VarDecl() )* <ENDRECORD> <SEMICOLON>
+    <RECORD> t=<ident> {
+        YaplSymbol symbol = (YaplSymbol) symbolTable.lookup(t.image);
+
+        if(symbol != null)
+            throw new YaplException(
+                      CompilerError.SymbolExists,
+                      t.beginLine,
+                      t.beginColumn
+            );
+
+        symbolTable.addSymbol(
+                new YaplSymbol(
+                        t.image, SymbolKind.Typename
+                )
+        );
+
+    } VarDecl() ( VarDecl() )* <ENDRECORD> <SEMICOLON>
 }
 
-void Decl() :
+void Decl() throws YaplException :
 {}
 {
     <DECLARE> ( ConstDecl() | VarDecl() | TypeDecl() )*
 }
 
-void FormalParam() :
+void FormalParam() throws YaplException :
 {}
 {
     Type() <ident>
 }
 
-void FormalParamList() :
+void FormalParamList() throws YaplException :
 {}
 {
     FormalParam() ( <COMMA> FormalParam() )*
