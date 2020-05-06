@@ -92,10 +92,6 @@ public class SymbolTable implements Symboltable {
 
     @Override
     public Symbol lookup(String name) throws YaplException {
-        throw new UnsupportedOperationException("Use the overload with row and col instead.");
-    }
-
-    public Symbol lookup(String name, int row, int col) {
         if (name == null)
             throw new IllegalArgumentException("name must not be null");
 
@@ -110,11 +106,11 @@ public class SymbolTable implements Symboltable {
      * Checks if the token is correctly declared, based on 3.2.1.
      *
      * @param name the name of the token
-     * @return
+     * @return the correctly declared symbol
      * @throws YaplException
      */
-    public void checkCorrectDeclarationAsIdentifier(String name, int row, int col) throws YaplException {
-        Symbol s = this.lookup(name, row, col);
+    public Symbol checkCorrectDeclarationAsIdentifier(String name, int row, int col) throws YaplException {
+        Symbol s = this.lookup(name);
 
         if (s == null)
             throw new YaplException(CompilerError.IdentNotDecl, row, col, new YaplExceptionArgs(name));
@@ -125,7 +121,7 @@ public class SymbolTable implements Symboltable {
             case Typename:
             case Procedure:
             case Parameter:
-                return;
+                return s;
 
             default:
                 throw new YaplException(CompilerError.IdentNotDecl, row, col, new YaplExceptionArgs(name));
@@ -133,18 +129,14 @@ public class SymbolTable implements Symboltable {
     }
 
     public void checkCorrectDeclarationAsProcedure(String name, int row, int col) throws YaplException {
-        checkCorrectDeclarationAsIdentifier(name, row, col);
-
-        Symbol s = this.lookup(name, row, col);
+        Symbol s = checkCorrectDeclarationAsIdentifier(name, row, col);
 
         if (SymbolKind.find(s.getKind()) != SymbolKind.Procedure)
             throw new YaplException(CompilerError.SymbolIllegalUse, row, col, new YaplExceptionArgs(name, s.getKindString()));
     }
 
     public void checkCorrectDeclarationAsPrimaryExpression(String name, int row, int col) throws YaplException {
-        checkCorrectDeclarationAsIdentifier(name, row, col);
-
-        Symbol s = this.lookup(name, row, col);
+        Symbol s = checkCorrectDeclarationAsIdentifier(name, row, col);
 
         switch (SymbolKind.find(s.getKind())) {
             case Variable:
@@ -158,18 +150,14 @@ public class SymbolTable implements Symboltable {
     }
 
     public void checkCorrectDeclarationAsTypeName(String name, int row, int col) throws YaplException {
-        checkCorrectDeclarationAsIdentifier(name, row, col);
-
-        Symbol s = this.lookup(name, row, col);
+        Symbol s = checkCorrectDeclarationAsIdentifier(name, row, col);
 
         if (SymbolKind.find(s.getKind()) != SymbolKind.Typename)
             throw new YaplException(CompilerError.SymbolIllegalUse, row, col, new YaplExceptionArgs(name, s.getKindString()));
     }
 
     public void checkCorrectDeclarationAsArray(String name, int row, int col) throws YaplException {
-        checkCorrectDeclarationAsIdentifier(name, row, col);
-
-        Symbol s = this.lookup(name, row, col);
+        Symbol s = checkCorrectDeclarationAsIdentifier(name, row, col);
 
         switch (SymbolKind.find(s.getKind())) {
             case Variable:
@@ -182,9 +170,7 @@ public class SymbolTable implements Symboltable {
     }
 
     public void checkCorrectDeclarationAsLValue(String name, int row, int col) throws YaplException {
-        checkCorrectDeclarationAsIdentifier(name, row, col);
-
-        Symbol s = this.lookup(name, row, col);
+        Symbol s = checkCorrectDeclarationAsIdentifier(name, row, col);
 
         switch (SymbolKind.find(s.getKind())) {
             case Variable:
