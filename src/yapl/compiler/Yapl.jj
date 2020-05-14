@@ -22,12 +22,9 @@ PARSER_BEGIN(Yapl)
 
 package yapl.compiler;
 
-import yapl.impl.SymbolKind;
-import yapl.impl.SymbolTable;
-import yapl.impl.YaplSymbol;
-import yapl.interfaces.CompilerError;
-import yapl.lib.CompilerMessage;
-import yapl.lib.YaplException;
+import yapl.impl.*;
+import yapl.interfaces.*;
+import yapl.lib.*;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -234,10 +231,10 @@ void MulOp() throws YaplException :
     <MUL> | <DIV> | <MOD>
 }
 
-void Literal() throws YaplException :
+Type Literal() throws YaplException :
 {}
 {
-    <TRUE> | <FALSE> | <number>
+    <TRUE> {return Type.BOOL;} | <FALSE> {return Type.BOOL;} | <number> {return Type.INT;}
 }
 
 // used to access properties of records.
@@ -256,9 +253,17 @@ void ArrayLen() throws YaplException :
 {Token t;}
 {
     <ARR_LEN> t=<ident> {
-        String symbolName = t.image;
-        symbolTable.checkCorrectDeclarationAsArray(symbolName, t.beginLine, t.beginColumn);
-    } [ Selector() ]
+    String symbolName = t.image;
+    symbolTable.checkCorrectDeclarationAsArray(symbolName, t.beginLine, t.beginColumn);
+    Symbol s = symbolTable.lookup(symbolName);
+    if (!(s.getType() instanceof ArrayType))
+        throw new YaplException(
+                CompilerError.ArrayLenNotArray,
+                t.beginLine, t.beginColumn,
+                new YaplExceptionArgs(symbolName)
+        );
+}
+    [ Selector() ]
 }
 
 void PrimaryExpr() throws YaplException :
@@ -393,68 +398,101 @@ void Block() throws YaplException :
     { symbolTable.closeScope(); }
 }
 
-void NonArrayType() throws YaplException :
+Type NonArrayType() throws YaplException :
 {Token t;}
 {
-    <INT> | <BOOL> | t=<ident>
-    { symbolTable.checkCorrectDeclarationAsTypeName(t.image, t.beginLine, t.beginColumn); }
+    <INT> { return Type.INT; } | <BOOL> { return Type.BOOL; } | t=<ident>
+    {
+        symbolTable.checkCorrectDeclarationAsTypeName(t.image, t.beginLine, t.beginColumn);
+        return symbolTable.lookup(t.image).getType();
+    }
 }
 
-void Type() throws YaplException :
-{}
+Type Type() throws YaplException :
+{int dim = 0; Type elemType;}
 {
-    NonArrayType() ( <L_SQ_BRACKET> <R_SQ_BRACKET> )*
+    elemType=NonArrayType() ( <L_SQ_BRACKET> <R_SQ_BRACKET> {dim++;} )*
+    {
+        if (dim == 0) {
+            return elemType;
+        } else {
+            return new ArrayType(dim, elemType);
+        }
+    }
 }
 
-void ReturnType() throws YaplException :
-{}
+Type ReturnType() throws YaplException :
+{Type type;}
 {
-    <VOID> | Type()
+    <VOID> { return Type.VOID; } | type=Type() { return type; }
 }
 
 // declares a constant in the current scope
 // f.e.: Const len = 10;
 // throws an exception if the identifier already exists
 void ConstDecl() throws YaplException :
-{Token t;}
+{Token t; Type type;}
 {
-    <CONST> t=<ident> {
-        String symbolName = t.image;
-
-        symbolTable.addSymbol(
-                    new YaplSymbol(
-                        t.image, SymbolKind.Constant
-                    ),
-                    t.beginLine,
-                    t.beginColumn
-                );
-    } <CONST_ASSIGN> Literal() <SEMICOLON>
+    <CONST> t=<ident>
+    {
+        Symbol s = new YaplSymbol(t.image, SymbolKind.Constant);
+        symbolTable.addSymbol(s, t.beginLine, t.beginColumn);
+    }
+    <CONST_ASSIGN> type=Literal()
+    { s.setType(type); }
+    <SEMICOLON>
 }
 
 // declares a constant in the current scope
-// f.e.: someWeirdNumber = 10;
+// f.e.: int i, j;
 // throws an exception if the identifier already exists
 void VarDecl() throws YaplException :
-{Token t, t2;}
+{Token t, t2; Type type;}
 {
-    Type() t=<ident> {
+    type=Type() t=<ident>
+    {
          symbolTable.addSymbol(
-                 new YaplSymbol(
-                         t.image, SymbolKind.Variable
-                 ),
+                 new YaplSymbol(t.image, SymbolKind.Variable, type),
                  t.beginLine,
                  t.beginColumn
          );
+     }
+     ( <COMMA> t2=<ident>
+         {
+             symbolTable.addSymbol(
+                     new YaplSymbol(t2.image, SymbolKind.Variable, type),
+                     t2.beginLine,
+                     t2.beginColumn
+             );
+         }
+    )* <SEMICOLON>
+}
 
-     } ( <COMMA> t2=<ident> {
-         symbolTable.addSymbol(
-                 new YaplSymbol(
-                         t2.image, SymbolKind.Variable
-                 ),
-                 t2.beginLine,
-                 t2.beginColumn
-         );
-     } )* <SEMICOLON>
+// declares a field in a record type
+// f.e.: int width, height;
+// throws an exception if the identifier already exists
+void FieldDecl(RecordType recordType) throws YaplException :
+{Token t, t2; Type type;}
+{
+    type=Type() t=<ident>
+    {
+        symbolTable.addSymbol(
+                new YaplSymbol(t.image, SymbolKind.Variable, type),
+                t.beginLine,
+                t.beginColumn
+        );
+        recordType.addField(t.image, type);
+    }
+    ( <COMMA> t2=<ident>
+    {
+        symbolTable.addSymbol(
+                new YaplSymbol(t2.image, SymbolKind.Variable, type),
+                t2.beginLine,
+                t2.beginColumn
+        );
+        recordType.addField(t2.image, type);
+    }
+    )* <SEMICOLON>
 }
 
 // declares a Record in the current scope
@@ -463,18 +501,19 @@ void VarDecl() throws YaplException :
 void TypeDecl() throws YaplException :
 {Token t;}
 {
-    <RECORD> t=<ident> {
+    <RECORD> t=<ident>
+    {
+        RecordType recordType = new RecordType();
         symbolTable.openScope(
                  new YaplSymbol(
-                         t.image, SymbolKind.Typename
+                         t.image, SymbolKind.Typename, recordType
                  ),
                  t.beginLine,
                  t.beginColumn
         );
-
-    } VarDecl() ( VarDecl() )* <ENDRECORD> <SEMICOLON> {
-        symbolTable.closeScope();
     }
+    FieldDecl(recordType) ( FieldDecl(recordType) )* <ENDRECORD> <SEMICOLON>
+    { symbolTable.closeScope(); }
 }
 
 void Decl() throws YaplException :
@@ -484,12 +523,12 @@ void Decl() throws YaplException :
 }
 
 void FormalParam() throws YaplException :
-{Token t;}
+{Token t; Type type;}
 {
-    Type() t=<ident> {
+    type=Type() t=<ident> {
         symbolTable.addSymbol(
                  new YaplSymbol(
-                         t.image, SymbolKind.Parameter
+                         t.image, SymbolKind.Parameter, type
                  ),
                  t.beginLine,
                  t.beginColumn
@@ -504,15 +543,15 @@ void FormalParamList() throws YaplException :
 }
 
 void Procedure() throws YaplException :
-{Token name, endName;}
+{Token name, endName; Type type;}
 {
-    <PROCEDURE> ReturnType() name=<ident>
+    <PROCEDURE> type=ReturnType() name=<ident>
     {
-    symbolTable.openScope(
-             new YaplSymbol(name.image, SymbolKind.Procedure),
-             name.beginLine,
-             name.beginColumn
-    );
+        symbolTable.openScope(
+                new YaplSymbol(name.image, SymbolKind.Procedure, type),
+                name.beginLine,
+                name.beginColumn
+        );
     }
     <L_BRACKET> [ FormalParamList() ] <R_BRACKET> Block() endName=<ident> <SEMICOLON>
     { symbolTable.closeScope(endName.image, false, endName.beginLine, endName.beginColumn); }

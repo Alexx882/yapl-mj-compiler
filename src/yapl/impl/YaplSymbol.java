@@ -43,6 +43,11 @@ public class YaplSymbol implements yapl.interfaces.Symbol {
         this.name = name;
     }
 
+    public YaplSymbol(String name, SymbolKind kind, Type type) {
+        this(name, kind);
+        this.type = type;
+    }
+
     @Override
     public Type getType() {
         return type;

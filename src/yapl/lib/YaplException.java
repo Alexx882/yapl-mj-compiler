@@ -59,6 +59,9 @@ public class YaplException extends Throwable implements CompilerError {
             case CompilerError.SymbolIllegalUse:
                 sb.append(String.format("illegal use of %s %s", args.kind, args.name));
                 break;
+
+            case CompilerError.ArrayLenNotArray:
+                sb.append("expression after '#' is not an array type");
         }
 
         return sb.toString();

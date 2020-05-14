@@ -1,9 +1,10 @@
 package yapl.interfaces;
 
+import yapl.compiler.Token;
 import yapl.lib.ArrayType;
 import yapl.lib.RecordType;
 import yapl.lib.Type;
-import yapl.lib.YAPLException;
+import yapl.lib.YaplException;
 
 /**
  * Interface to code generator methods called by the parser. Some of these
@@ -39,15 +40,15 @@ public interface CodeGen {
 	 * and the register number will be stored there. 
 	 * 
 	 * @return the register number.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (NoMoreRegs) if there are no free registers available;
 	 *             cannot occur with stack machine backends.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (Internal) if the data type of <code>attr</code>
 	 *             is not primitive.
 	 */
 	public byte loadValue(Attrib attr) 
-	throws YAPLException;
+	throws YaplException;
 
 	/**
 	 * Load the address of the operand represented by <code>attr</code> into a register
@@ -56,12 +57,12 @@ public interface CodeGen {
 	 * and the register number will be stored there. 
 	 * 
 	 * @return the register number.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (NoMoreRegs) if there are no free registers available;
 	 *             cannot occur with stack machine backends.
 	 */
 	public byte loadAddress(Attrib attr) 
-	throws YAPLException;
+	throws YaplException;
 
 	/**
 	 * Release the register used by the register operand <code>attr</code>. 
@@ -81,12 +82,12 @@ public interface CodeGen {
 	 * @param sym
 	 *            the symbol to allocate space for. The symbol's
 	 *            {@link Symbol#getOffset() address offset} will be updated.
-	 * @throws YAPLException (Internal)
+	 * @throws YaplException (Internal)
 	 *            if <code>sym</code> does not provide sufficient information
 	 *            (data type, scope), etc.
 	 */
 	public void allocVariable(Symbol sym) 
-	throws YAPLException;
+	throws YaplException;
 
 	/**
 	 * Store field offsets in Symbol instances representing record fields.
@@ -98,34 +99,34 @@ public interface CodeGen {
 	/**
 	 * Store length of given array dimension at run time.
 	 * The stored array dimensions are needed for run-time allocation of
-	 * the array, see {@link #allocArray(Type)}.
+	 * the array, see {@link #allocArray(ArrayType)}.
 	 * @param dim       dimension number; starts at 0.
 	 * @param length    operand representing the dimension length.
 	 *                  Its register is released.
-	 * @throws YAPLException (TooManyDims)
+	 * @throws YaplException (TooManyDims)
 	 *                  if <code>dim</code> exceeds an implementation-defined maximum.
 	 */
 	public void storeArrayDim(int dim, Attrib length)
-	throws YAPLException;
+	throws YaplException;
 	
 	/**
 	 * Allocate array at run time.
 	 * @param arrayType  array type.
 	 * @return           Attrib object representing a register operand
 	 *                   holding the array base address.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 */
 	public Attrib allocArray(ArrayType arrayType)
-	throws YAPLException;
+	throws YaplException;
 	
 	/**
 	 * Allocate record at run time.
 	 * @return           Attrib object representing a register operand
 	 *                   holding the record base address.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 */
 	public Attrib allocRecord(RecordType recordType)
-	throws YAPLException;
+	throws YaplException;
 	
 	/**
 	 * Update a formal parameter's {@link Symbol#getOffset() address offset}.
@@ -155,11 +156,11 @@ public interface CodeGen {
 	 * @param index
 	 *            the operand (expression) representing the index of the array
 	 *            element (starts at 0). Register is released.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *            (Internal) if <code>arr</code> does not represent an array type.
 	 */
 	public void arrayOffset(Attrib arr, Attrib index) 
-	throws YAPLException;
+	throws YaplException;
 
 	/**
 	 * Generate code loading the address of the given record field into a register.
@@ -167,21 +168,21 @@ public interface CodeGen {
 	 * 
 	 * @param record	the operand representing the record.
 	 * @param field		the record field.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 * 					(Internal) if <code>record</code> does not represent a record type.
 	 */
 	public void recordOffset(Attrib record, Symbol field)
-	throws YAPLException;
+	throws YaplException;
 	
 	/**
 	 * Generate code for array length computation at run time.
 	 * @param arr   operand representing the array.
 	 * @return      the object referenced by <code>arr</code>, updated to represent
 	 *              the number of elements of the first dimension of <code>arr</code>.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 */
 	public Attrib arrayLength(Attrib arr)
-	throws YAPLException;
+	throws YaplException;
 	
 	/**
 	 * Generate code for variable assignment.
@@ -191,12 +192,12 @@ public interface CodeGen {
 	 *            left-hand side value of assignment (target).
 	 * @param expr
 	 *            right-hand side value of assignment (source).
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (Internal) if <code>lvalue</code> has an illegal
 	 *             {@link Attrib#getKind() kind property}.
 	 */
 	public void assign(Attrib lvalue, Attrib expr) 
-	throws YAPLException;
+	throws YaplException;
 
 	/**
 	 * Check types and generate code for unary operation <code>x = op x</code>.
@@ -207,15 +208,15 @@ public interface CodeGen {
 	 * @param x
 	 *            the operand.
 	 * @return the object referenced by <code>x</code>.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (Internal) if the operator symbol is not a valid unary
 	 *             operator.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (IllegalOp1Type) if the operator cannot be applied to the
 	 *             given operand type.
 	 */
-	public Attrib op1(Token op, Attrib x) 
-	throws YAPLException;
+	public Attrib op1(Token op, Attrib x)
+	throws YaplException;
 
 	/**
 	 * Check types and generate code for binary operation
@@ -229,15 +230,15 @@ public interface CodeGen {
 	 * @param y
 	 *            the right operand.
 	 * @return the object referenced by <code>x</code>.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (Internal) if the operator symbol is not a valid binary
 	 *             operator.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (IllegalOp2Type) if the operator cannot be applied to
 	 *             the given operand types.
 	 */
 	public Attrib op2(Attrib x, Token op, Attrib y) 
-	throws YAPLException;
+	throws YaplException;
 
 	/**
 	 * Check types and generate code for relational operation
@@ -252,15 +253,15 @@ public interface CodeGen {
 	 * @param y
 	 *            the right operand.
 	 * @return the object referenced by <code>x</code>.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (Internal) if the operator symbol is not a valid relational
 	 *             operator.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (IllegalRelOpType) if the operator cannot be applied to
 	 *             the given operand types.
 	 */
 	public Attrib relOp(Attrib x, Token op, Attrib y) 
-	throws YAPLException;
+	throws YaplException;
 
 	/**
 	 * Check types and generate code for equality operation <code>x op y</code>.
@@ -275,15 +276,15 @@ public interface CodeGen {
 	 * @param y
 	 *            the right operand.
 	 * @return the object referenced by <code>x</code>.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (Internal) if the operator symbol is not a valid relational
 	 *             operator.
-	 * @throws YAPLException
+	 * @throws YaplException
 	 *             (IllegalEqualOpType) if the operator cannot be applied to
 	 *             the given operand types.
 	 */
 	public Attrib equalOp(Attrib x, Token op, Attrib y) 
-	throws YAPLException;
+	throws YaplException;
 
 	/**
 	 * Enter procedure. Generate the procedure's prolog (setup stack frame).
@@ -295,7 +296,7 @@ public interface CodeGen {
 	 *            (entry point) will be generated.
 	 */
 	public void enterProc(Symbol proc) 
-	throws YAPLException;
+	throws YaplException;
 
 	/**
 	 * Exit procedure. Generate the procedure's epilog (release stack frame).
@@ -305,7 +306,7 @@ public interface CodeGen {
 	 *            exit from the main program.
 	 */
 	public void exitProc(Symbol proc) 
-	throws YAPLException;
+	throws YaplException;
 
 	/**
 	 * Return from procedure. The return value type is <em>not</em> checked -
@@ -322,7 +323,7 @@ public interface CodeGen {
 	 *            not return a value.
 	 */
 	public void returnFromProc(Symbol proc, Attrib returnVal)
-	throws YAPLException;
+	throws YaplException;
 
 	/**
 	 * Procedure call.
@@ -337,7 +338,7 @@ public interface CodeGen {
 	 *         <code>null</code> if the procedure does not return a value.
 	 */
 	public Attrib callProc(Symbol proc, Attrib[] args) 
-	throws YAPLException;
+	throws YaplException;
 
 	/**
 	 * Generate code for writing a string constant to standard output.
@@ -346,14 +347,14 @@ public interface CodeGen {
 	 *            string to be written, enclosed in double quotes.
 	 */
 	public void writeString(String string) 
-	throws YAPLException;
+	throws YaplException;
 
 	/**
 	 * Generate code jumping to <code>label</code> if
 	 * <code>condition</code> is <code>false</code>.
 	 */
 	public void branchIfFalse(Attrib condition, String label)
-	throws YAPLException;
+	throws YaplException;
 
 	/** Generate code unconditionally jumping to <code>label</code>. */
 	public void jump(String label);
