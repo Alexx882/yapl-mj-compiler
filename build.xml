@@ -55,7 +55,8 @@
 
     <target name="clean" description="remove generated files">
         <delete>
-            <fileset dir="." includes="**/*.mj **/*.txt **/*.exec **/*.log" excludes="*README*"/>
+            <fileset dir="." includes="**/*.mj **/*.txt **/*.exec **/*.log **/*.PASSED **/*.FAILED"
+                     excludes="**/*README*"/>
         </delete>
         <delete dir="${build}"/>
         <delete>
@@ -155,6 +156,7 @@
     <target name="eval-all" description="evaluate all test cases of a given compiler 'version'" depends="compile-java">
         <var name="npassed" value="0"/>
         <var name="ntotal" value="0"/>
+        <delete dir="testfiles/${version}" includes="*.PASSED *.FAILED *.log"/>
         <for param="yapl">
             <path>
                 <fileset dir="testfiles/${version}" includes="*.yapl"/>
@@ -167,11 +169,13 @@
                             <param name="log" value="@{yapl}.log"/>
                         </antcall>
                         <echo>@{yapl}: PASSED</echo>
+<!--                        <touch file="@{yapl}.PASSED"/>-->
                         <!--suppress AntResolveInspection -->
                         <math result="npassed" operand1="${npassed}" operation="+" operand2="1" datatype="int"/>
                     </try>
                     <catch>
                         <echo>@{yapl}: FAILED</echo>
+                        <touch file="@{yapl}.FAILED"/>
                     </catch>
                 </trycatch>
                 <!--suppress AntResolveInspection -->
