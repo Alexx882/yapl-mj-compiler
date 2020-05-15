@@ -1,6 +1,10 @@
 # ignore JavaCC generated files
 *.java
+*.jj
 
 # except the provided modified ones
 !./ParseException.java
 !./TokenMgrError.java
+
+# and our modified ones
+!./ASTLiteral.java

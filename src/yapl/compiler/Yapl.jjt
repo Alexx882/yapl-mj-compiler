@@ -1,5 +1,6 @@
 options {
     LOOKAHEAD = 1;
+    MULTI = true;
     CHOICE_AMBIGUITY_CHECK = 2;
     OTHER_AMBIGUITY_CHECK = 1;
     STATIC = true;
@@ -62,6 +63,7 @@ public class Yapl {
 
         Yapl parser = new Yapl(input);
 
+        //noinspection TryWithIdenticalCatches // since jjtree apparently does not support collapsed catches
         try {
             if (parse){
                 Yapl.Program();
@@ -70,7 +72,11 @@ public class Yapl {
             else
                 Yapl.PrintTokens();
 
-        } catch (TokenMgrError | ParseException | YaplException e) {
+        } catch (TokenMgrError e) {
+            CompilerMessage.printError(e, progName);
+        } catch (ParseException e) {
+            CompilerMessage.printError(e, progName);
+        } catch (YaplException e) {
             CompilerMessage.printError(e, progName);
         }
     }
@@ -187,7 +193,10 @@ void PrintTokens() :
 
             // collect special tokens that appeared between t and the last token
             // access through t.specialToken (if more than one, then access recursively -> need to reverse order)
-            Stack<Token> stack = new Stack<>();
+
+
+            //noinspection Convert2Diamond // since jjtree apparently does not support those
+            Stack<Token> stack = new Stack<Token>();
             Token s = t.specialToken;
             while (s != null) {
                 stack.push(s);
@@ -239,7 +248,7 @@ Type Literal() throws YaplException :
 
 // used to access properties of records.
 // f.e.: someRecord.someProperty
-void Selector() throws YaplException :
+Type Selector(Type type) throws YaplException :
 {}
 {
     ( <L_SQ_BRACKET> Expr() <R_SQ_BRACKET> | <DOT> <ident> ) [ Selector() ]
@@ -351,6 +360,7 @@ void Assignment() throws YaplException :
     t=<ident> {
         String symbolName = t.image;
         symbolTable.checkCorrectDeclarationAsLValue(symbolName, t.beginLine, t.beginColumn);
+        Type s = symbolTable.lookup(symbolName).getType();
       } [ Selector() ] <ASSIGN> Expr()
 }
 
