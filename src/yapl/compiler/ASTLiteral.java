@@ -23,6 +23,7 @@ class ASTLiteral extends SimpleNode {
 
     public void setValue(boolean value) {
         this.value = (new BackendMJ()).boolValue(value);
+        this.type = Type.BOOL;
     }
 
     public Type getType() {

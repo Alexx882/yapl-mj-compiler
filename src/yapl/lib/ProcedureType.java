@@ -33,20 +33,19 @@ public class ProcedureType extends Type {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
 
         ProcedureType that = (ProcedureType) o;
 
-        if (!Objects.equals(name, that.name)) return false;
+        //if (!Objects.equals(name, that.name)) return false;
         if (!Objects.equals(returnType, that.returnType)) return false;
-        return Objects.equals(parameters, that.parameters);
+        return Objects.equals(parameters.values(), that.parameters.values());
     }
 
     @Override
     public int hashCode() {
         int result = name != null ? name.hashCode() : 0;
         result = 31 * result + (returnType != null ? returnType.hashCode() : 0);
-        result = 31 * result + (parameters != null ? parameters.hashCode() : 0);
+        result = 31 * result + (parameters != null ? parameters.values().hashCode() : 0);
         return result;
     }
 }

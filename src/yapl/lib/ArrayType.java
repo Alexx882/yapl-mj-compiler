@@ -13,14 +13,13 @@ public class ArrayType extends Type {
     }
 
     public Type getIlimType() {
-        return dim == 0 ? baseType : new ArrayType(dim - 1, baseType);
+        return dim == 1 ? baseType : new ArrayType(dim - 1, baseType);
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
 
         ArrayType arrayType = (ArrayType) o;
 

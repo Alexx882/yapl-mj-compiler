@@ -1,9 +1,10 @@
 options {
     LOOKAHEAD = 1;
     MULTI = true;
+    TRACK_TOKENS = true;
     CHOICE_AMBIGUITY_CHECK = 2;
     OTHER_AMBIGUITY_CHECK = 1;
-    STATIC = true;
+    STATIC = false;
     DEBUG_PARSER = false;
     DEBUG_LOOKAHEAD = false;
     DEBUG_TOKEN_MANAGER = false;
@@ -66,11 +67,11 @@ public class Yapl {
         //noinspection TryWithIdenticalCatches // since jjtree apparently does not support collapsed catches
         try {
             if (parse){
-                Yapl.Program();
+                parser.Program();
                 CompilerMessage.printOK(progName);
             }
             else
-                Yapl.PrintTokens();
+                parser.PrintTokens();
 
         } catch (TokenMgrError e) {
             CompilerMessage.printError(e, progName);
@@ -138,17 +139,13 @@ TOKEN : { // operators
   | < GE: ">=" >
   | < LT: "<" >
   | < LE: "<=" >
-  | < REL_OP : <LT> | <LE> | <GT> | <GE> >
   | < EQ: "==" >
   | < NE: "!=" >
-  | < EQ_OP : <EQ> | <NE> >
   | < ADD: "+" >
   | < SUB: "-" >
-  | < ADD_OP: <ADD> | <SUB> >
   | < MUL: "*" >
   | < DIV: "/" >
   | < MOD: "%" >
-  | < MUL_OP: <MUL> | <DIV> | <MOD> >
   | < CONST_ASSIGN: "=" >
   | < ASSIGN: ":=" >
   | < ARR_LEN: "#" >
@@ -307,7 +304,12 @@ Type PrimaryExpr() throws YaplException :
 {Token t; Type type;}
 {
     (
-        type=Literal() | <L_BRACKET> type=Expr() <R_BRACKET> | LOOKAHEAD(2) type=ProcedureCall() | t=<ident> {
+        type=Literal() | <L_BRACKET> type=Expr() <R_BRACKET> | LOOKAHEAD(2) type=ProcedureCall() {
+            if (type.isVoid()) {
+                t = ((SimpleNode) jjtree.peekNode()).jjtGetFirstToken();
+                throw new YaplException(CompilerError.ProcNotFuncExpr, t.beginLine, t.beginColumn, null);
+            }
+        } | t=<ident> {
             String symbolName = t.image;
             symbolTable.checkCorrectDeclarationAsPrimaryExpression(symbolName, t.beginLine, t.beginColumn);
             type = symbolTable.lookup(symbolName).getType();
@@ -391,10 +393,20 @@ Type CondAndExpr() throws YaplException :
 }
 
 Type CreationExpr() throws YaplException :
-{int dim = 0; Type type;}
+{Token tNew, tArray; int dim = 0; Type type, sizeType;}
 {
-    <NEW> type=NonArrayType() ( <L_SQ_BRACKET> Expr() <R_SQ_BRACKET> {dim++;} )*
-    { return dim == 0 ? type : new ArrayType(dim, type); }
+    tNew=<NEW> type=NonArrayType() ( <L_SQ_BRACKET> sizeType=Expr() tArray=<R_SQ_BRACKET>
+        {
+            if (!sizeType.isInt())
+                throw new YaplException(CompilerError.BadArraySelector, tArray.beginLine, tArray.beginColumn, null);
+            dim++;
+        }
+    )*
+    {
+        if (dim == 0 && !type.isRecord())
+            throw new YaplException(CompilerError.InvalidNewType, tNew.beginLine, tNew.beginColumn, null);
+        return dim == 0 ? type : new ArrayType(dim, type);
+    }
 }
 
 Type Expr() throws YaplException :
@@ -423,8 +435,8 @@ void ArgumentList() throws YaplException :
 Type ProcedureCall() throws YaplException :
 {Token t;}
 {
-    // TODO predefined functions
     t=<ident> {
+        jjtThis.jjtSetValue(t);
         String symbolName = t.image;
         symbolTable.checkCorrectDeclarationAsProcedure(symbolName, t.beginLine, t.beginColumn);
         Type type = symbolTable.lookup(symbolName).getType();

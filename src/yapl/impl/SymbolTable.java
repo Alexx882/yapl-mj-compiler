@@ -3,6 +3,8 @@ package yapl.impl;
 import yapl.interfaces.CompilerError;
 import yapl.interfaces.Symbol;
 import yapl.interfaces.Symboltable;
+import yapl.lib.ProcedureType;
+import yapl.lib.Type;
 import yapl.lib.YaplException;
 import yapl.lib.YaplExceptionArgs;
 
@@ -210,8 +212,22 @@ public class SymbolTable implements Symboltable {
     private static Scope getYaplPredefinedScope() {
         Scope predefScope = new Scope(true);
 
-        for (String procedureName : new String[]{"writeint", "writebool", "writeln", "readint"})
-            predefScope.putSymbol(procedureName, new YaplSymbol(procedureName, SymbolKind.Procedure));
+        LinkedList<ProcedureType> predef = new LinkedList<>();
+
+        ProcedureType writeint = new ProcedureType("writeint", Type.VOID);
+        writeint.addParam("", Type.INT);
+        predef.add(writeint);
+
+        ProcedureType writebool = new ProcedureType("writebool", Type.VOID);
+        writeint.addParam("", Type.BOOL);
+        predef.add(writeint);
+
+        predef.add(new ProcedureType("writeln", Type.VOID));
+
+        predef.add(new ProcedureType("writeint", Type.INT));
+
+        for (ProcedureType procedure : predef)
+            predefScope.putSymbol(procedure.getName(), new YaplSymbol(procedure.getName(), SymbolKind.Procedure, procedure));
 
         return predefScope;
     }
