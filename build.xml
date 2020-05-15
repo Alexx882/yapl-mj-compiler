@@ -30,6 +30,8 @@
     <property name="outfile" value="${yapl}.mj"/>
     <property name="log" value="${yapl}.log"/>
     <property name="grammar" value="Yapl"/>
+    <property name="grammar-dir" value="${src}/yapl/compiler"/>
+    <property name="grammar-path" value="${grammar-dir}/${grammar}"/>
     <property name="debug" value="false"/>
     <property name="simple-input" value="abc" description="Input for the simple scanner"/>
 
@@ -53,19 +55,23 @@
 
     <target name="clean" description="remove generated files">
         <delete>
-            <fileset dir="." includes="**/*.mj **/*.txt **/*.exec **/*.log" excludes="*README*"/>
+            <fileset dir="." includes="**/*.mj **/*.txt **/*.exec **/*.log **/*.PASSED **/*.FAILED"
+                     excludes="**/*README*"/>
         </delete>
         <delete dir="${build}"/>
         <delete>
-            <fileset dir="${src}/yapl/compiler">
+            <fileset dir="${grammar-dir}">
+                <include name="${grammar}.jj"/>
                 <include name="**/*.java"/>
                 <exclude name="TokenMgrError.java"/>
                 <exclude name="ParseException.java"/>
+                <exclude name="ASTLiteral.java"/>
             </fileset>
         </delete>
     </target>
 
-    <target name="compile-ant-task" depends="init">
+    <target name="compile-ant-task" depends="init"
+            description="compiles the YaplBadMessageCondition task for checking the compiler messages">
         <javac srcdir="${src}" destdir="${build}" includeantruntime="true">
             <include name="yapl/ant/*.java"/>
         </javac>
@@ -73,13 +79,21 @@
         <typedef name="yaplbadmessage" classname="yapl.ant.YaplBadMessageCondition" classpath="${build}"/>
     </target>
 
-    <!-- define here targets for compiling and running the YAPL compiler -->
-    <target name="compile-java" depends="init" description="compile the YAPL compiler">
-        <javacc target="${src}/yapl/compiler/${grammar}.jj" outputdirectory="${src}/yapl/compiler"
+    <target name="compile-jjtree" depends="init">
+        <jjtree target="${grammar-path}.jjt" outputdirectory="${grammar-dir}" javacchome="${javacc}"/>
+    </target>
+
+    <target name="compile-javacc" depends="compile-jjtree">
+        <javacc target="${grammar-path}.jj" outputdirectory="${grammar-dir}"
                 javacchome="${javacc}" debugparser="${debug}"/>
+    </target>
+
+    <!-- define here targets for compiling and running the YAPL compiler -->
+    <target name="compile-java" depends="compile-javacc" description="compile the YAPL compiler">
         <javac srcdir="${src}" destdir="${build}" includeantruntime="true">
             <include name="yapl/compiler/*.java"/>
             <include name="yapl/interfaces/*.java"/>
+            <include name="yapl/impl/*.java"/>
             <include name="yapl/lib/*.java"/>
         </javac>
     </target>
@@ -93,7 +107,8 @@
         </java>
     </target>
 
-    <target name="run-scanner" depends="compile-java" description="run the YAPL scanner, writing tokens and compiler messages to ${log}">
+    <target name="run-scanner" depends="compile-java"
+            description="run the YAPL scanner, writing tokens and compiler messages to ${log}">
         <java classname="yapl.compiler.${grammar}" input="${yapl}" output="${log}">
             <classpath>
                 <pathelement location="${build}"/>
@@ -141,6 +156,7 @@
     <target name="eval-all" description="evaluate all test cases of a given compiler 'version'" depends="compile-java">
         <var name="npassed" value="0"/>
         <var name="ntotal" value="0"/>
+        <delete dir="testfiles/${version}" includes="*.PASSED *.FAILED *.log"/>
         <for param="yapl">
             <path>
                 <fileset dir="testfiles/${version}" includes="*.yapl"/>
@@ -153,11 +169,13 @@
                             <param name="log" value="@{yapl}.log"/>
                         </antcall>
                         <echo>@{yapl}: PASSED</echo>
+<!--                        <touch file="@{yapl}.PASSED"/>-->
                         <!--suppress AntResolveInspection -->
                         <math result="npassed" operand1="${npassed}" operation="+" operand2="1" datatype="int"/>
                     </try>
                     <catch>
                         <echo>@{yapl}: FAILED</echo>
+                        <touch file="@{yapl}.FAILED"/>
                     </catch>
                 </trycatch>
                 <!--suppress AntResolveInspection -->

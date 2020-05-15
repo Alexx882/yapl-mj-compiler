@@ -1,6 +1,11 @@
 # ignore JavaCC generated files
 *.java
+*.jj
 
 # except the provided modified ones
-!./ParseException.java
-!./TokenMgrError.java
+!ParseException.java
+!TokenMgrError.java
+
+# and our modified ones
+# ADD FILES TO ANT CLEAN TARGET EXCEPTIONS AS WELL
+!ASTLiteral.java
