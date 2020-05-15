@@ -5,11 +5,15 @@ import java.util.Objects;
 public class ArrayType extends Type {
 
     private final int dim;
-    private final Type ilimType;
+    private final Type baseType;
 
-    public ArrayType(int dim, Type ilimType) {
+    public ArrayType(int dim, Type baseType) {
         this.dim = dim;
-        this.ilimType = ilimType;
+        this.baseType = baseType;
+    }
+
+    public Type getIlimType() {
+        return dim == 0 ? baseType : new ArrayType(dim - 1, baseType);
     }
 
     @Override
@@ -21,13 +25,13 @@ public class ArrayType extends Type {
         ArrayType arrayType = (ArrayType) o;
 
         if (dim != arrayType.dim) return false;
-        return Objects.equals(ilimType, arrayType.ilimType);
+        return Objects.equals(baseType, arrayType.baseType);
     }
 
     @Override
     public int hashCode() {
         int result = dim;
-        result = 31 * result + (ilimType != null ? ilimType.hashCode() : 0);
+        result = 31 * result + (baseType != null ? baseType.hashCode() : 0);
         return result;
     }
 }

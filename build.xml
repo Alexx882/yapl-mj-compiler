@@ -60,9 +60,11 @@
         <delete dir="${build}"/>
         <delete>
             <fileset dir="${grammar-dir}">
+                <include name="${grammar}.jj"/>
                 <include name="**/*.java"/>
                 <exclude name="TokenMgrError.java"/>
                 <exclude name="ParseException.java"/>
+                <exclude name="ASTLiteral.java"/>
             </fileset>
         </delete>
     </target>

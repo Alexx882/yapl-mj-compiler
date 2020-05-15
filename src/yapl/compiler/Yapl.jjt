@@ -138,13 +138,17 @@ TOKEN : { // operators
   | < GE: ">=" >
   | < LT: "<" >
   | < LE: "<=" >
+  | < REL_OP : <LT> | <LE> | <GT> | <GE> >
   | < EQ: "==" >
   | < NE: "!=" >
+  | < EQ_OP : <EQ> | <NE> >
   | < ADD: "+" >
   | < SUB: "-" >
+  | < ADD_OP: <ADD> | <SUB> >
   | < MUL: "*" >
   | < DIV: "/" >
   | < MOD: "%" >
+  | < MUL_OP: <MUL> | <DIV> | <MOD> >
   | < CONST_ASSIGN: "=" >
   | < ASSIGN: ":=" >
   | < ARR_LEN: "#" >
@@ -168,7 +172,7 @@ TOKEN :
                    "(",")","[","]","{","}","\\","@","&","^","|"])* "\"">
 }
 
-void Program() throws YaplException :
+ASTProgram Program() throws YaplException :
 {Token name, endName;}
 {
     <PROGRAM> name=<ident> {
@@ -181,7 +185,7 @@ void Program() throws YaplException :
 
 } ( Decl() | Procedure() )* <BEGIN> StatementList() <END> endName=<ident> <DOT> {
     symbolTable.closeScope(endName.image, true, endName.beginLine, endName.beginColumn);
-    } <EOF>
+    } <EOF> {return jjtThis;}
 }
 
 void PrintTokens() :
@@ -216,120 +220,195 @@ void PrintTokens() :
     <EOF >
 }
 
-void RelOp() throws YaplException :
-{}
+Token RelOp() throws YaplException :
+{Token t;}
 {
-    <LT> | <LE> | <GT> | <GE>
+    (t=<LT> | t=<LE> | t=<GT> | t=<GE>) {return t;}
 }
 
-void EqualOp() throws YaplException :
-{}
+Token EqualOp() throws YaplException :
+{Token t;}
 {
-    <EQ> | <NE>
+    (t=<EQ> | t=<NE>) {return t;}
 }
 
-void AddOp() throws YaplException :
-{}
+Token AddOp() throws YaplException :
+{Token t;}
 {
-    <ADD> | <SUB>
+    (t=<ADD> | t=<SUB>) {return t;}
 }
 
-void MulOp() throws YaplException :
-{}
+Token MulOp() throws YaplException :
+{Token t;}
 {
-    <MUL> | <DIV> | <MOD>
+    (t=<MUL> | t=<DIV> | t=<MOD>) {return t;}
 }
 
 Type Literal() throws YaplException :
-{}
+{Token t;}
 {
-    <TRUE> {return Type.BOOL;} | <FALSE> {return Type.BOOL;} | <number> {return Type.INT;}
+    (
+        <TRUE> {jjtThis.setValue(true);}
+      | <FALSE> {jjtThis.setValue(false);}
+      | t=<number> {jjtThis.setValue(Integer.parseInt(t.image));}
+    ) { return jjtThis.getType(); }
 }
 
 // used to access properties of records.
 // f.e.: someRecord.someProperty
-Type Selector(Type type) throws YaplException :
-{}
+Type Selector(Type parentType) throws YaplException :
+{Type type, resultType; Token t;}
 {
-    ( <L_SQ_BRACKET> Expr() <R_SQ_BRACKET> | <DOT> <ident> ) [ Selector() ]
+    ( t=<L_SQ_BRACKET> type=Expr()
+    {
+        if (!parentType.isArray())
+            throw new YaplException(CompilerError.SelectorNotArray, t.beginLine, t.beginColumn, null);
+        if (!type.isInt())
+            throw new YaplException(CompilerError.BadArraySelector, t.beginLine, t.beginColumn, null);
+
+        resultType = ((ArrayType) parentType).getIlimType();
+    }
+    <R_SQ_BRACKET> | <DOT> t=<ident>
+    {
+        if (!parentType.isRecord())
+            throw new YaplException(CompilerError.SelectorNotRecord, t.beginLine, t.beginColumn, null);
+
+        RecordType parentRecordType = (RecordType) parentType;
+        if (!parentRecordType.hasField(t.image))
+            throw new YaplException(CompilerError.InvalidRecordField, t.beginLine, t.beginColumn, null);
+
+        resultType = parentRecordType.getFieldType(t.image);
+    }
+    ) [ resultType=Selector(resultType) ] { return resultType; }
 }
 
 // retrieves the length of an array.
 // throws an exception if the identifier is not found
 // throws an exception if the "#" operator is applied to a non-array
 // f.e.: #someArray
-void ArrayLen() throws YaplException :
+Type ArrayLen() throws YaplException :
 {Token t;}
 {
     <ARR_LEN> t=<ident> {
-    String symbolName = t.image;
-    symbolTable.checkCorrectDeclarationAsArray(symbolName, t.beginLine, t.beginColumn);
-    Symbol s = symbolTable.lookup(symbolName);
-    if (!(s.getType() instanceof ArrayType))
-        throw new YaplException(
-                CompilerError.ArrayLenNotArray,
-                t.beginLine, t.beginColumn,
-                new YaplExceptionArgs(symbolName)
-        );
-}
-    [ Selector() ]
-}
-
-void PrimaryExpr() throws YaplException :
-{Token t;}
-{
-    Literal() | <L_BRACKET> Expr() <R_BRACKET> | LOOKAHEAD(2) ProcedureCall() | t=<ident> {
         String symbolName = t.image;
-        symbolTable.checkCorrectDeclarationAsPrimaryExpression(symbolName, t.beginLine, t.beginColumn);
-    } [ Selector() ] | ArrayLen()
+        symbolTable.checkCorrectDeclarationAsArray(symbolName, t.beginLine, t.beginColumn);
+        Type type = symbolTable.lookup(symbolName).getType();
+    }
+    [ type=Selector(type) ]
+    {
+        if (!type.isArray())
+            throw new YaplException(CompilerError.ArrayLenNotArray,
+                    t.beginLine, t.beginColumn, new YaplExceptionArgs(symbolName));
+        return type;
+    }
 }
 
-void UnaryExpr() throws YaplException :
-{}
+Type PrimaryExpr() throws YaplException :
+{Token t; Type type;}
 {
-    [ AddOp() ] PrimaryExpr()
+    (
+        type=Literal() | <L_BRACKET> type=Expr() <R_BRACKET> | LOOKAHEAD(2) type=ProcedureCall() | t=<ident> {
+            String symbolName = t.image;
+            symbolTable.checkCorrectDeclarationAsPrimaryExpression(symbolName, t.beginLine, t.beginColumn);
+            type = symbolTable.lookup(symbolName).getType();
+        } [ type=Selector(type) ] | ArrayLen() { type = Type.INT; }
+    ) {return type;}
 }
 
-void MulExpr() throws YaplException :
-{}
+Type UnaryExpr() throws YaplException :
+{Token t = null; Type resultType;}
 {
-    UnaryExpr() ( MulOp() UnaryExpr() )*
+    [ /*jjtThis.op=*/t=AddOp() ] resultType=PrimaryExpr()
+    {
+        if (t != null && !resultType.isInt())
+            throw new YaplException(CompilerError.IllegalOp1Type, t.beginLine, t.beginColumn, null);
+        return resultType;
+    }
 }
 
-void AddExpr() throws YaplException :
-{}
+Type MulExpr() throws YaplException :
+{Token t; Type resultType, rType;}
 {
-    MulExpr() ( AddOp() MulExpr() )*
+    resultType=UnaryExpr() ( /*jjtThis.op=*/t=MulOp() rType=UnaryExpr() /*#MulExpr*/
+        {
+            if (!resultType.isInt() || !rType.isInt())
+                throw new YaplException(CompilerError.IllegalOp2Type, t.beginLine, t.beginColumn, null);
+            //resultType = Type.INT;
+        }
+    )*
+    { return resultType; }
 }
 
-void RelExpr() throws YaplException :
-{}
+Type AddExpr() throws YaplException :
+{Token t; Type resultType, rType;}
 {
-    AddExpr() [ RelOp() AddExpr() ]
+    resultType=MulExpr() ( /*jjtThis.op=*/t=AddOp() rType=MulExpr() /*#AddExpr*/
+        {
+            if (!resultType.isInt() || !rType.isInt())
+                throw new YaplException(CompilerError.IllegalOp2Type, t.beginLine, t.beginColumn, null);
+            //resultType = Type.INT;
+        }
+    )*
+    { return resultType; }
 }
 
-void EqualExpr() throws YaplException :
-{}
+Type RelExpr() throws YaplException :
+{Token t; Type resultType, rType;}
 {
-    RelExpr() [ EqualOp() RelExpr() ]
+    resultType=AddExpr() [ /*jjtThis.op=*/t=RelOp() rType=AddExpr() /*#RelExpr*/
+        {
+            if (!resultType.isInt() || !rType.isInt())
+                throw new YaplException(CompilerError.IllegalRelOpType, t.beginLine, t.beginColumn, null);
+            resultType = Type.BOOL;
+        }
+    ]
+    { return resultType; }
 }
 
-void CondAndExpr() throws YaplException :
-{}
+Type EqualExpr() throws YaplException :
+{Token t; Type resultType, rType;}
 {
-    EqualExpr() ( <AND> EqualExpr() )*
+    resultType=RelExpr() [ /*jjtThis.op=*/t=EqualOp() rType=RelExpr() /*#EqualExpr*/
+        {
+            if (!resultType.equals(rType) || !(resultType.isInt() || resultType.isBool()))
+                throw new YaplException(CompilerError.IllegalEqualOpType, t.beginLine, t.beginColumn, null);
+            resultType = Type.BOOL;
+        }
+    ]
+    { return resultType; }
 }
 
-void CreationExpr() throws YaplException :
-{}
+Type CondAndExpr() throws YaplException :
+{Token t; Type resultType, rType;}
 {
-    <NEW> NonArrayType() ( <L_SQ_BRACKET> Expr() <R_SQ_BRACKET> )*
+    resultType=EqualExpr() ( t=<AND> rType=EqualExpr()
+    {
+        if (!resultType.isBool() || !rType.isBool())
+            throw new YaplException(CompilerError.CondNotBool, t.beginLine, t.beginColumn, null);
+        //resultType = Type.BOOL;
+    }
+    )* { return resultType; }
 }
 
-void Expr() throws YaplException :
-{}
+Type CreationExpr() throws YaplException :
+{int dim = 0; Type type;}
 {
-    CondAndExpr() ( <OR> CondAndExpr() )* | CreationExpr()
+    <NEW> type=NonArrayType() ( <L_SQ_BRACKET> Expr() <R_SQ_BRACKET> {dim++;} )*
+    { return dim == 0 ? type : new ArrayType(dim, type); }
+}
+
+Type Expr() throws YaplException :
+{Token t; Type rType, resultType;}
+{
+    (
+        resultType=CondAndExpr() ( t=<OR> rType=CondAndExpr()
+        {
+            if (!resultType.isBool() || !rType.isBool())
+                throw new YaplException(CompilerError.CondNotBool, t.beginLine, t.beginColumn, null);
+            //resultType = Type.BOOL;
+        }
+        )* | resultType=CreationExpr()
+    ) { return resultType; }
 }
 
 void ArgumentList() throws YaplException :
@@ -341,13 +420,18 @@ void ArgumentList() throws YaplException :
 // calls a procedure
 // f.e.: someProcedure()
 // throws an exception if the identifier is not found
-void ProcedureCall() throws YaplException :
+Type ProcedureCall() throws YaplException :
 {Token t;}
 {
+    // TODO predefined functions
     t=<ident> {
         String symbolName = t.image;
         symbolTable.checkCorrectDeclarationAsProcedure(symbolName, t.beginLine, t.beginColumn);
-    } <L_BRACKET> [ ArgumentList() ] <R_BRACKET>
+        Type type = symbolTable.lookup(symbolName).getType();
+        if (type != null && !type.isProcedure())
+            throw new YaplException(CompilerError.Internal, t.beginLine, t.beginColumn, new YaplExceptionArgs("procedure symbol is not procedure"));
+        Type returnType = ((ProcedureType) type).getReturnType();
+    } <L_BRACKET> [ ArgumentList() ] <R_BRACKET> {return returnType;}
 }
 
 // assigns a value to an identifier
@@ -355,19 +439,27 @@ void ProcedureCall() throws YaplException :
 // throws an exception if the identifier is not found
 // throws an exception if the identifier cannot be written to e.g. it is a procedure
 void Assignment() throws YaplException :
-{Token t;}
+{Token t; Type lType, rType;}
 {
     t=<ident> {
         String symbolName = t.image;
         symbolTable.checkCorrectDeclarationAsLValue(symbolName, t.beginLine, t.beginColumn);
-        Type s = symbolTable.lookup(symbolName).getType();
-      } [ Selector() ] <ASSIGN> Expr()
+        lType = symbolTable.lookup(symbolName).getType();
+    } [ lType=Selector(lType) ] t=<ASSIGN> rType=Expr()
+    {
+        if (!lType.equals(rType))
+            throw new YaplException(CompilerError.TypeMismatchAssign, t.beginLine, t.beginColumn, null);
+    }
 }
 
 void IfStatement() throws YaplException :
-{}
+{Token t; Type type;}
 {
-    <IF> Expr() <THEN> StatementList() [ <ELSE> StatementList() ] <ENDIF>
+    t=<IF> type=Expr()
+    { if (!type.isBool()) throw new YaplException(CompilerError.CondNotBool, t.beginLine, t.beginColumn, null); }
+    <THEN> StatementList()
+    [ <ELSE> StatementList() ]
+    <ENDIF>
 }
 
 void WhileStatement() throws YaplException :
@@ -376,19 +468,19 @@ void WhileStatement() throws YaplException :
     <WHILE> Expr() <DO> StatementList() <ENDWHILE>
 }
 
-void ReturnStatement() throws YaplException :
-{}
+Type ReturnStatement() throws YaplException :
+{Type type;}
 {
-    <RETURN> [ Expr() ]
+    <RETURN> {type=Type.VOID;} [ type=Expr() ] { return type; }
 }
 
 void WriteStatement() throws YaplException :
 {}
 {
-    <WRITE> <string>
+    <WRITE> jjtThis.value=<string>
 }
 
-void Statement() throws YaplException :
+void Statement() throws YaplException #void :
 {}
 {
     IfStatement() | WhileStatement() | ReturnStatement() | WriteStatement() | LOOKAHEAD(2) Assignment() | ProcedureCall() | Block()
@@ -408,7 +500,7 @@ void Block() throws YaplException :
     { symbolTable.closeScope(); }
 }
 
-Type NonArrayType() throws YaplException :
+Type NonArrayType() throws YaplException #void :
 {Token t;}
 {
     <INT> { return Type.INT; } | <BOOL> { return Type.BOOL; } | t=<ident>
@@ -418,7 +510,7 @@ Type NonArrayType() throws YaplException :
     }
 }
 
-Type Type() throws YaplException :
+Type Type() throws YaplException #void :
 {int dim = 0; Type elemType;}
 {
     elemType=NonArrayType() ( <L_SQ_BRACKET> <R_SQ_BRACKET> {dim++;} )*
@@ -431,7 +523,7 @@ Type Type() throws YaplException :
     }
 }
 
-Type ReturnType() throws YaplException :
+Type ReturnType() throws YaplException #void :
 {Type type;}
 {
     <VOID> { return Type.VOID; } | type=Type() { return type; }
@@ -513,7 +605,7 @@ void TypeDecl() throws YaplException :
 {
     <RECORD> t=<ident>
     {
-        RecordType recordType = new RecordType();
+        RecordType recordType = new RecordType(t.image);
         symbolTable.openScope(
                  new YaplSymbol(
                          t.image, SymbolKind.Typename, recordType
@@ -526,13 +618,13 @@ void TypeDecl() throws YaplException :
     { symbolTable.closeScope(); }
 }
 
-void Decl() throws YaplException :
+void Decl() throws YaplException #Declarations :
 {}
 {
     <DECLARE> ( ConstDecl() | VarDecl() | TypeDecl() )*
 }
 
-void FormalParam() throws YaplException :
+void FormalParam(ProcedureType procedure) throws YaplException #void :
 {Token t; Type type;}
 {
     type=Type() t=<ident> {
@@ -543,26 +635,31 @@ void FormalParam() throws YaplException :
                  t.beginLine,
                  t.beginColumn
         );
+        procedure.addParam(t.image, type);
     }
 }
 
-void FormalParamList() throws YaplException :
+void FormalParamList(ProcedureType procedure) throws YaplException #void :
 {}
 {
-    FormalParam() ( <COMMA> FormalParam() )*
+    FormalParam(procedure) ( <COMMA> FormalParam(procedure) )*
 }
 
-void Procedure() throws YaplException :
-{Token name, endName; Type type;}
+Type Procedure() throws YaplException :
+{Token name, endName; Type returnType;}
 {
-    <PROCEDURE> type=ReturnType() name=<ident>
+    <PROCEDURE> returnType=ReturnType() name=<ident>
     {
+        ProcedureType procedure = new ProcedureType(name.image, returnType);
         symbolTable.openScope(
-                new YaplSymbol(name.image, SymbolKind.Procedure, type),
+                new YaplSymbol(name.image, SymbolKind.Procedure, procedure),
                 name.beginLine,
                 name.beginColumn
         );
     }
-    <L_BRACKET> [ FormalParamList() ] <R_BRACKET> Block() endName=<ident> <SEMICOLON>
-    { symbolTable.closeScope(endName.image, false, endName.beginLine, endName.beginColumn); }
+    <L_BRACKET> [ FormalParamList(procedure) ] <R_BRACKET> Block() endName=<ident> <SEMICOLON>
+    {
+        symbolTable.closeScope(endName.image, false, endName.beginLine, endName.beginColumn);
+        return returnType;
+    }
 }
