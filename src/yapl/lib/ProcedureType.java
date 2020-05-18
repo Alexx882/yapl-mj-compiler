@@ -29,6 +29,10 @@ public class ProcedureType extends Type {
         parameters.put(name, type);
     }
 
+    public LinkedHashMap<String, Type> getParams() {
+        return new LinkedHashMap<>(parameters);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

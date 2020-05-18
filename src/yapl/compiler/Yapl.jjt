@@ -31,6 +31,10 @@ import yapl.lib.*;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Stack;
 
 /**
@@ -334,7 +338,7 @@ Type MulExpr() throws YaplException :
     resultType=UnaryExpr() ( /*jjtThis.op=*/t=MulOp() rType=UnaryExpr() /*#MulExpr*/
         {
             if (!resultType.isInt() || !rType.isInt())
-                throw new YaplException(CompilerError.IllegalOp2Type, t.beginLine, t.beginColumn, null);
+                throw new YaplException(CompilerError.IllegalOp2Type, t.beginLine, t.beginColumn, new YaplExceptionArgs(t.image));
             //resultType = Type.INT;
         }
     )*
@@ -347,7 +351,7 @@ Type AddExpr() throws YaplException :
     resultType=MulExpr() ( /*jjtThis.op=*/t=AddOp() rType=MulExpr() /*#AddExpr*/
         {
             if (!resultType.isInt() || !rType.isInt())
-                throw new YaplException(CompilerError.IllegalOp2Type, t.beginLine, t.beginColumn, null);
+                throw new YaplException(CompilerError.IllegalOp2Type, t.beginLine, t.beginColumn, new YaplExceptionArgs(t.image));
             //resultType = Type.INT;
         }
     )*
@@ -386,7 +390,7 @@ Type CondAndExpr() throws YaplException :
     resultType=EqualExpr() ( t=<AND> rType=EqualExpr()
     {
         if (!resultType.isBool() || !rType.isBool())
-            throw new YaplException(CompilerError.CondNotBool, t.beginLine, t.beginColumn, null);
+            throw new YaplException(CompilerError.IllegalOp2Type, t.beginLine, t.beginColumn, new YaplExceptionArgs("And"));
         //resultType = Type.BOOL;
     }
     )* { return resultType; }
@@ -416,34 +420,64 @@ Type Expr() throws YaplException :
         resultType=CondAndExpr() ( t=<OR> rType=CondAndExpr()
         {
             if (!resultType.isBool() || !rType.isBool())
-                throw new YaplException(CompilerError.CondNotBool, t.beginLine, t.beginColumn, null);
+                throw new YaplException(CompilerError.IllegalOp2Type, t.beginLine, t.beginColumn, new YaplExceptionArgs("Or"));
             //resultType = Type.BOOL;
         }
         )* | resultType=CreationExpr()
     ) { return resultType; }
 }
 
-void ArgumentList() throws YaplException :
-{}
+void CondExpr() throws YaplException #void :
+{Type type;}
 {
-    Expr() ( <COMMA> Expr() )*
+    type=Expr()
+    {
+        if (!type.isBool()) {
+            Token t = ((SimpleNode) jjtree.peekNode()).jjtGetFirstToken();
+            throw new YaplException(CompilerError.CondNotBool, t.beginLine, t.beginColumn, null);
+        }
+    }
+}
+
+List<Type> ArgumentList() throws YaplException :
+{Type type; List<Type> argList = new LinkedList<Type>();}
+{
+    type=Expr() { argList.add(type); } ( <COMMA> type=Expr() { argList.add(type); } )*
+    {return argList;}
 }
 
 // calls a procedure
 // f.e.: someProcedure()
 // throws an exception if the identifier is not found
 Type ProcedureCall() throws YaplException :
-{Token t;}
+{Token t; List<Type> argList = new LinkedList<Type>();}
 {
     t=<ident> {
         jjtThis.jjtSetValue(t);
         String symbolName = t.image;
         symbolTable.checkCorrectDeclarationAsProcedure(symbolName, t.beginLine, t.beginColumn);
         Type type = symbolTable.lookup(symbolName).getType();
-        if (type != null && !type.isProcedure())
+        if (type == null || !type.isProcedure())
             throw new YaplException(CompilerError.Internal, t.beginLine, t.beginColumn, new YaplExceptionArgs("procedure symbol is not procedure"));
         Type returnType = ((ProcedureType) type).getReturnType();
-    } <L_BRACKET> [ ArgumentList() ] <R_BRACKET> {return returnType;}
+    } <L_BRACKET> [ argList=ArgumentList() ] t=<R_BRACKET>
+    {
+        Iterator<Type> actualArgs = ((ProcedureType) type).getParams().values().iterator();
+        int i = 0;
+        for (Type actual : argList) {
+            Type reference = actualArgs.hasNext() ? actualArgs.next() : null;
+            if (reference == null || !reference.equals(actual)) {
+                t = ((SimpleNode) jjtThis.jjtGetChild(0).jjtGetChild(i)).jjtGetFirstToken();
+                throw new YaplException(CompilerError.ArgNotApplicable, t.beginLine, t.beginColumn, null);
+            }
+            i++;
+        }
+
+        if (actualArgs.hasNext())
+            throw new YaplException(CompilerError.TooFewArgs, t.beginLine, t.beginColumn, null);
+
+        return returnType;
+    }
 }
 
 // assigns a value to an identifier
@@ -465,10 +499,9 @@ void Assignment() throws YaplException :
 }
 
 void IfStatement() throws YaplException :
-{Token t; Type type;}
+{}
 {
-    t=<IF> type=Expr()
-    { if (!type.isBool()) throw new YaplException(CompilerError.CondNotBool, t.beginLine, t.beginColumn, null); }
+    <IF> CondExpr()
     <THEN> StatementList()
     [ <ELSE> StatementList() ]
     <ENDIF>
@@ -477,7 +510,7 @@ void IfStatement() throws YaplException :
 void WhileStatement() throws YaplException :
 {}
 {
-    <WHILE> Expr() <DO> StatementList() <ENDWHILE>
+    <WHILE> CondExpr() <DO> StatementList() <ENDWHILE>
 }
 
 Type ReturnStatement() throws YaplException :

@@ -215,16 +215,16 @@ public class SymbolTable implements Symboltable {
         LinkedList<ProcedureType> predef = new LinkedList<>();
 
         ProcedureType writeint = new ProcedureType("writeint", Type.VOID);
-        writeint.addParam("", Type.INT);
+        writeint.addParam("i", Type.INT);
         predef.add(writeint);
 
         ProcedureType writebool = new ProcedureType("writebool", Type.VOID);
-        writeint.addParam("", Type.BOOL);
-        predef.add(writeint);
+        writebool.addParam("b", Type.BOOL);
+        predef.add(writebool);
 
         predef.add(new ProcedureType("writeln", Type.VOID));
 
-        predef.add(new ProcedureType("writeint", Type.INT));
+        predef.add(new ProcedureType("readint", Type.INT));
 
         for (ProcedureType procedure : predef)
             predefScope.putSymbol(procedure.getName(), new YaplSymbol(procedure.getName(), SymbolKind.Procedure, procedure));
