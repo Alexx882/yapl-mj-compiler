@@ -514,9 +514,36 @@ void WhileStatement() throws YaplException :
 }
 
 Type ReturnStatement() throws YaplException :
-{Type type;}
+{Token t; Type type; boolean hasExpr = false;}
 {
-    <RETURN> {type=Type.VOID;} [ type=Expr() ] { return type; }
+    t=<RETURN> {type=Type.VOID;} [ type=Expr()
+        {
+            t = ((SimpleNode) jjtree.peekNode()).jjtGetFirstToken();
+            hasExpr = true;
+        }
+    ]
+    {
+        Type refType;
+        int errorNumber;
+        Symbol s = symbolTable.getNearestParentSymbol(YaplSymbol.Procedure);
+        if (s != null) {
+            if (!s.getType().isProcedure())
+                throw new YaplException(CompilerError.Internal, t.beginLine, t.beginColumn, new YaplExceptionArgs("procedure type is not ProcedureType"));
+
+            refType = ((ProcedureType) s.getType()).getReturnType();
+            errorNumber = refType.isVoid() ? CompilerError.IllegalRetValProc : CompilerError.InvalidReturnType;
+        } else {
+            refType = Type.VOID;
+            errorNumber = CompilerError.IllegalRetValMain;
+        }
+
+        if (hasExpr && refType.isVoid())
+            throw new YaplException(errorNumber, t.beginLine, t.beginColumn, null);
+        if (!refType.equals(type))
+            throw new YaplException(errorNumber, t.beginLine, t.beginColumn, null);
+
+        return type;
+    }
 }
 
 void WriteStatement() throws YaplException :

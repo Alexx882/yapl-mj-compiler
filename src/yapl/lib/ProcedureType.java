@@ -5,10 +5,10 @@ import java.util.Objects;
 
 public class ProcedureType extends Type {
 
-    private String name;
+    private final String name;
 
-    private Type returnType;
-    private LinkedHashMap<String, Type> parameters;
+    private final Type returnType;
+    private final LinkedHashMap<String, Type> parameters;
 
     public String getName() {
         return name;
@@ -42,7 +42,15 @@ public class ProcedureType extends Type {
 
         //if (!Objects.equals(name, that.name)) return false;
         if (!Objects.equals(returnType, that.returnType)) return false;
-        return Objects.equals(parameters.values(), that.parameters.values());
+
+        var thisIter = parameters.entrySet().iterator();
+        var thatIter = that.parameters.entrySet().iterator();
+
+        while (thisIter.hasNext())
+            if (!thatIter.hasNext() || !Objects.equals(thisIter.next(), thatIter.next()))
+                return false;
+
+        return !thatIter.hasNext();
     }
 
     @Override

@@ -2,19 +2,20 @@ package yapl.lib;
 
 import yapl.interfaces.CompilerError;
 
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.Objects;
 
 public class RecordType extends Type {
 
-    private String name;
+    private final String name;
 
     // LinkedHashMap is insertion ordered and will retain the order in which elements were inserted
     private final LinkedHashMap<String, Type> fields;
 
     public RecordType(String name) {
         this.name = name;
+
 
         fields = new LinkedHashMap<>();
     }
@@ -53,7 +54,14 @@ public class RecordType extends Type {
 
         RecordType that = (RecordType) o;
 
-        return fields.equals(that.fields);
+        var thisIter = fields.entrySet().iterator();
+        var thatIter = that.fields.entrySet().iterator();
+
+        while (thisIter.hasNext())
+            if (!thatIter.hasNext() || !Objects.equals(thisIter.next(), thatIter.next()))
+                return false;
+
+        return !thatIter.hasNext();
     }
 
     @Override

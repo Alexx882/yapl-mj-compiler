@@ -4,7 +4,14 @@ import java.util.Objects;
 
 public class ArrayType extends Type {
 
+    /**
+     * dim(this): the number of dimensions of the array (dim(this) >= 1).
+     */
     private final int dim;
+
+    /**
+     * elem(this): the element data type of the array.
+     */
     private final Type baseType;
 
     public ArrayType(int dim, Type baseType) {
@@ -12,6 +19,10 @@ public class ArrayType extends Type {
         this.baseType = baseType;
     }
 
+    /**
+     * subarray(this): the array type this' derived from this by omitting the first dimension,
+     * @return subarray(this)
+     */
     public Type getIlimType() {
         return dim == 1 ? baseType : new ArrayType(dim - 1, baseType);
     }
