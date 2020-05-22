@@ -66,6 +66,7 @@
                 <exclude name="TokenMgrError.java"/>
                 <exclude name="ParseException.java"/>
                 <exclude name="ASTLiteral.java"/>
+                <exclude name="NodeUtils.java"/>
             </fileset>
         </delete>
     </target>

@@ -9,3 +9,6 @@
 # and our modified ones
 # ADD FILES TO ANT CLEAN TARGET EXCEPTIONS AS WELL
 !ASTLiteral.java
+
+# and this
+!NodeUtils.java

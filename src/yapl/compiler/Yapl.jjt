@@ -732,6 +732,14 @@ Type Procedure() throws YaplException :
     <L_BRACKET> [ FormalParamList(procedure) ] <R_BRACKET> Block() endName=<ident> <SEMICOLON>
     {
         symbolTable.closeScope(endName.image, false, endName.beginLine, endName.beginColumn);
+
+        // procedures that have a return type (other than void) must have at least one return statement
+        if (returnType != Type.VOID && !NodeUtils.hasChildOfType(jjtThis, ASTReturnStatement.class, -1)) {
+            // correct token for this exception is the "End" from the Block()
+            Token t = jjtThis.jjtGetLastToken();
+            throw new YaplException(CompilerError.MissingReturn, t.beginLine, t.beginColumn, null);
+        }
+
         return returnType;
     }
 }
