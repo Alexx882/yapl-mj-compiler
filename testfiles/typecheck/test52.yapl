@@ -23,4 +23,4 @@ Begin
     stat2 := stat;
     writeint(stat.count);
     writeint(a.median);
-End test46.
+End test52.

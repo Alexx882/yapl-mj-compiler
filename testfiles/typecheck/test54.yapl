@@ -1,0 +1,30 @@
+/* Type check test input.
+ * <expected result> ERROR 29 (line 29, column 11)
+ * test recursive
+ *
+ * adapted from test46
+ */
+Program test54
+Declare
+    Record LinkedListItem
+        int val;
+        LinkedListItem next;
+    EndRecord;
+    Record CompatibleLinkedListItem
+        int val;
+        CompatibleLinkedListItem next;
+    EndRecord;
+    Record IncompatibleLinkedListItem
+        int val;
+        IncompatibleLinkedListItem next;
+        IncompatibleLinkedListItem prev;
+    EndRecord;
+
+    LinkedListItem list;
+    CompatibleLinkedListItem list2;
+    IncompatibleLinkedListItem list3;
+Begin
+    list.val := 100;
+    list2 := list;
+    list3 := list;
+End test54.

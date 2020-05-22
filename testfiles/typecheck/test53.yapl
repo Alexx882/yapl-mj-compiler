@@ -1,0 +1,20 @@
+/* Type check test input.
+ * <expected result> OK
+ * expression after # is an array
+ *
+ * adapted from test46
+ */
+Program test53
+Declare
+    Record Stat
+        int count;
+        int[] arr;
+    EndRecord;
+
+    Stat stat;
+    int[] a;
+Begin
+    stat.count := 10;
+    stat.arr := new int[10];
+    writeint(#stat.arr);
+End test53.
