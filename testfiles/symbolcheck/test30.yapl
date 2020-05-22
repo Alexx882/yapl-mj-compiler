@@ -1,7 +1,9 @@
 /* Symbol check test input.
  * <expected result> OK
+ *
+ * adapted from test22
  */
-Program test22
+Program test30
 Declare
     int b;
 
@@ -15,6 +17,7 @@ Declare
     bool b;            /* hides global variable b */
 Begin
     b := b1 And b2;
+    Return b;
 End func;
 
 Procedure bool func2(int k, bool b1, bool b2)
@@ -22,8 +25,9 @@ Declare
     bool b;            /* hides global variable b */
 Begin
     b := b1 And b2;
+    Return b;
 End func2;
 
 Begin
     writeln();
-End test22.
+End test30.

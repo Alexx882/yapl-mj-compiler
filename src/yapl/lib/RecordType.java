@@ -57,9 +57,20 @@ public class RecordType extends Type {
         var thisIter = fields.entrySet().iterator();
         var thatIter = that.fields.entrySet().iterator();
 
-        while (thisIter.hasNext())
-            if (!thatIter.hasNext() || !Objects.equals(thisIter.next(), thatIter.next()))
+        while (thisIter.hasNext()) {
+            if (!thatIter.hasNext())
                 return false;
+
+            var thisNext = thisIter.next();
+            var thatNext = thatIter.next();
+
+            // check for recursive fields (if both fields are recursive they are considered equal)
+            if (this == thisNext.getValue() && that == thatNext.getValue())
+                continue;
+
+            if (!Objects.equals(thisNext, thatNext))
+                return false;
+        }
 
         return !thatIter.hasNext();
     }
