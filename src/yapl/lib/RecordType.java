@@ -1,6 +1,6 @@
 package yapl.lib;
 
-import yapl.interfaces.CompilerError;
+import yapl.impl.ErrorType;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -8,14 +8,13 @@ import java.util.Objects;
 
 public class RecordType extends Type {
 
-    private final String name;
+    public final String name;
 
     // LinkedHashMap is insertion ordered and will retain the order in which elements were inserted
     private final LinkedHashMap<String, Type> fields;
 
     public RecordType(String name) {
         this.name = name;
-
 
         fields = new LinkedHashMap<>();
     }
@@ -30,8 +29,8 @@ public class RecordType extends Type {
 
     public Type getFieldType(int index) throws YaplException {
         if (index >= fields.size())
-            throw new YaplException(CompilerError.Internal, -1, -1, new YaplExceptionArgs(
-                    "record field index out of bounds for type " + name)
+            throw new YaplException(ErrorType.Internal, -1, -1,
+                    "record field index out of bounds for type " + name
             );
 
         Iterator<Type> fieldTypes = fields.values().iterator();

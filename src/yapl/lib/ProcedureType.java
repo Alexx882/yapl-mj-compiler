@@ -5,14 +5,10 @@ import java.util.Objects;
 
 public class ProcedureType extends Type {
 
-    private final String name;
+    public final String name;
 
     private final Type returnType;
     private final LinkedHashMap<String, Type> parameters;
-
-    public String getName() {
-        return name;
-    }
 
     public Type getReturnType() {
         return returnType;

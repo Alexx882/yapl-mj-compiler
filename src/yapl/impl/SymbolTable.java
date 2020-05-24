@@ -1,14 +1,15 @@
 package yapl.impl;
 
-import yapl.interfaces.CompilerError;
 import yapl.interfaces.Symbol;
 import yapl.interfaces.Symboltable;
 import yapl.lib.ProcedureType;
 import yapl.lib.Type;
 import yapl.lib.YaplException;
-import yapl.lib.YaplExceptionArgs;
 
-import java.util.*;
+import java.util.LinkedList;
+import java.util.Stack;
+
+import static yapl.impl.ErrorType.*;
 
 public class SymbolTable implements Symboltable {
 
@@ -66,7 +67,7 @@ public class SymbolTable implements Symboltable {
         String startName = currentScope.getParentSymbol().getName();
 
         if (!startName.equals(name))
-            throw new YaplException(CompilerError.EndIdentMismatch, row, col, new YaplExceptionArgs(isProgram, startName, name));
+            throw new YaplException(EndIdentMismatch, row, col, name, isProgram ? "Program" : "Procedure", startName);
     }
 
     @Override
@@ -80,8 +81,10 @@ public class SymbolTable implements Symboltable {
         if (curScope.getParentSymbol() != null && SymbolKind.find(curScope.getParentSymbol().getKind()) == SymbolKind.Typename)
             s.setKind(SymbolKind.Field.kind);
 
-        if (curScope.containsSymbol(s.getName()))
-            throw new YaplException(CompilerError.SymbolExists, row, col, new YaplExceptionArgs(s.getName(), s.getKindString()));
+        if (curScope.containsSymbol(s.getName())) {
+            String alreadyDefinedKind = curScope.getSymbol(s.getName()).getKindString();
+            throw new YaplException(SymbolExists, row, col, s.getName(), alreadyDefinedKind);
+        }
 
         curScope.putSymbol(s.getName(), s);
     }
@@ -115,7 +118,7 @@ public class SymbolTable implements Symboltable {
         Symbol s = this.lookup(name);
 
         if (s == null)
-            throw new YaplException(CompilerError.IdentNotDecl, row, col, new YaplExceptionArgs(name));
+            throw new YaplException(IdentNotDecl, row, col, name);
 
         switch (SymbolKind.find(s.getKind())) {
             case Variable:
@@ -126,7 +129,7 @@ public class SymbolTable implements Symboltable {
                 return s;
 
             default:
-                throw new YaplException(CompilerError.IdentNotDecl, row, col, new YaplExceptionArgs(name));
+                throw new YaplException(IdentNotDecl, row, col, name);
         }
     }
 
@@ -134,7 +137,7 @@ public class SymbolTable implements Symboltable {
         Symbol s = checkCorrectDeclarationAsIdentifier(name, row, col);
 
         if (SymbolKind.find(s.getKind()) != SymbolKind.Procedure)
-            throw new YaplException(CompilerError.SymbolIllegalUse, row, col, new YaplExceptionArgs(name, s.getKindString()));
+            throw new YaplException(SymbolIllegalUse, row, col, s.getKindString(), name);
     }
 
     public void checkCorrectDeclarationAsPrimaryExpression(String name, int row, int col) throws YaplException {
@@ -147,7 +150,7 @@ public class SymbolTable implements Symboltable {
                 return;
 
             default:
-                throw new YaplException(CompilerError.SymbolIllegalUse, row, col, new YaplExceptionArgs(name, s.getKindString()));
+                throw new YaplException(SymbolIllegalUse, row, col, s.getKindString(), name);
         }
     }
 
@@ -155,7 +158,7 @@ public class SymbolTable implements Symboltable {
         Symbol s = checkCorrectDeclarationAsIdentifier(name, row, col);
 
         if (SymbolKind.find(s.getKind()) != SymbolKind.Typename)
-            throw new YaplException(CompilerError.SymbolIllegalUse, row, col, new YaplExceptionArgs(name, s.getKindString()));
+            throw new YaplException(SymbolIllegalUse, row, col, s.getKindString(), name);
     }
 
     public void checkCorrectDeclarationAsArray(String name, int row, int col) throws YaplException {
@@ -167,7 +170,7 @@ public class SymbolTable implements Symboltable {
                 return;
 
             default:
-                throw new YaplException(CompilerError.SymbolIllegalUse, row, col, new YaplExceptionArgs(name, s.getKindString()));
+                throw new YaplException(SymbolIllegalUse, row, col, s.getKindString(), name);
         }
     }
 
@@ -180,7 +183,7 @@ public class SymbolTable implements Symboltable {
                 return;
 
             default:
-                throw new YaplException(CompilerError.SymbolIllegalUse, row, col, new YaplExceptionArgs(name, s.getKindString()));
+                throw new YaplException(SymbolIllegalUse, row, col, s.getKindString(), name);
         }
     }
 
@@ -227,7 +230,7 @@ public class SymbolTable implements Symboltable {
         predef.add(new ProcedureType("readint", Type.INT));
 
         for (ProcedureType procedure : predef)
-            predefScope.putSymbol(procedure.getName(), new YaplSymbol(procedure.getName(), SymbolKind.Procedure, procedure));
+            predefScope.putSymbol(procedure.name, new YaplSymbol(procedure.name, SymbolKind.Procedure, procedure));
 
         return predefScope;
     }
