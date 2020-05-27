@@ -300,7 +300,7 @@ Type ArrayLen() throws YaplException :
     {
         if (!type.isArray())
             throw new YaplException(ArrayLenNotArray, t);
-        return type;
+        return type; // todo should be int right?
     }
 }
 

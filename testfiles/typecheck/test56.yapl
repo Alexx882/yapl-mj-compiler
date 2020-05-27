@@ -1,0 +1,23 @@
+/* Symbol check test input.
+ * <expected result> ERROR 29 (line 18, column 8)
+ * Type mismatch in assignment.
+ *
+ * checking return val of arraylen
+ */
+Program test55
+Declare
+    int b;
+
+Procedure void func3()
+Declare
+    int[] a;
+    int k;
+    bool b1;
+Begin
+    k := #a;
+    b1 := #a;
+End func3;
+
+Begin
+    writeln();
+End test55.

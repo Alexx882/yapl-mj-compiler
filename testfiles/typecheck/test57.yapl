@@ -1,0 +1,26 @@
+/* Symbol check test input.
+ * <expected result> ERROR 30 (line 25, column 23)
+ * Argument #4 not applicable to procedure 'func3'.
+ *
+ * checking parameter nr for proc
+ */
+Program test55
+Declare
+    int b;
+
+Procedure int func()
+Declare
+Begin
+    Return 1;
+End func;
+
+Procedure void func3(int a, bool b, int c)
+Declare
+Begin
+    writeln();
+    Return;
+End func3;
+
+Begin
+   func3(1, False, 3, 4);
+End test55.

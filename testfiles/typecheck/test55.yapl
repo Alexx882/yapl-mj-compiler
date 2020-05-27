@@ -1,0 +1,30 @@
+/* Symbol check test input.
+ * <expected result> ERROR 29 (line 25, column 7)
+ * Type mismatch in assignment.
+ *
+ * checking record compatibility
+ */
+Program test55
+Declare
+    int b;
+
+Record Node
+    int id;
+    Node secondNode;
+EndRecord;
+Record Node2
+    int k;
+    Node secondNode;
+EndRecord;
+
+Procedure bool func3(int k, bool b1, bool b2)
+Declare
+    Node k;
+    Node2 k2;
+Begin
+    k := k2;
+End func3;
+
+Begin
+    writeln();
+End test55.
