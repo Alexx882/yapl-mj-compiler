@@ -23,7 +23,7 @@ public class ArrayType extends Type {
      * subarray(this): the array type this' derived from this by omitting the first dimension,
      * @return subarray(this)
      */
-    public Type getIlimType() {
+    public Type getElemType() {
         return dim == 1 ? baseType : new ArrayType(dim - 1, baseType);
     }
 

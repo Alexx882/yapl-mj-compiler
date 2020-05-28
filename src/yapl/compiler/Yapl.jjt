@@ -268,7 +268,7 @@ Type Selector(Type parentType) throws YaplException :
         if (!type.isInt())
             throw new YaplException(BadArraySelector, t);
 
-        resultType = ((ArrayType) parentType).getIlimType();
+        resultType = ((ArrayType) parentType).getElemType();
     }
     <R_SQ_BRACKET> | <DOT> t=<ident>
     {
@@ -300,7 +300,7 @@ Type ArrayLen() throws YaplException :
     {
         if (!type.isArray())
             throw new YaplException(ArrayLenNotArray, t);
-        return type; // todo should be int right?
+        return Type.INT;
     }
 }
 
@@ -317,7 +317,8 @@ Type PrimaryExpr() throws YaplException :
             String symbolName = t.image;
             symbolTable.checkCorrectDeclarationAsPrimaryExpression(symbolName, t.beginLine, t.beginColumn);
             type = symbolTable.lookup(symbolName).getType();
-        } [ type=Selector(type) ] | ArrayLen() { type = Type.INT; }
+        } [ type=Selector(type) ]
+        | type=ArrayLen()
     ) {return type;}
 }
 
