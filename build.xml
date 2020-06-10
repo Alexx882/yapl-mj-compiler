@@ -34,6 +34,7 @@
     <property name="grammar-path" value="${grammar-dir}/${grammar}"/>
     <property name="debug" value="false"/>
     <property name="simple-input" value="abc" description="Input for the simple scanner"/>
+    <property name="runtimelib" value="${grammar-dir}/runtimelib.yapl"/>
 
     <property name="execlog" value="${yapl}.execlog"/>
     <property name="truefile" value="${yapl}.true"/>
@@ -100,11 +101,14 @@
     </target>
 
     <target name="run" depends="compile-java" description="run the YAPL compiler, writing compiler messages to ${log}">
-        <java classname="yapl.compiler.${grammar}" input="${yapl}" output="${log}">
+        <java classname="yapl.compiler.${grammar}" output="${log}">
             <classpath>
                 <pathelement location="${build}"/>
                 <pathelement path="${java.class.path}"/>
             </classpath>
+            <arg value="${yapl}"/>
+            <arg value="-o"/>
+            <arg value="${outfile}"/>
         </java>
     </target>
 

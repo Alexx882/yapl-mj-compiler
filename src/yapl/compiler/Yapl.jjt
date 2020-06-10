@@ -30,9 +30,7 @@ import yapl.lib.*;
 
 import static yapl.impl.ErrorType.*;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -41,31 +39,43 @@ import java.util.Stack;
 /**
  * Processes a yapl file.
  *
- * Usage: java Yapl [--scan-only] [path]
+ * Usage: java Yapl [--scan-only] [src_path] [-o out_path]
  *
- * Where path is the path to a yapl source file.
- * If no source file is provided, input will be read from STDIN.
+ * Where src_path points to a yapl source file,
+ * and out_path to the compiled binary MJ executable.
+ * If no src_path is provided, input will be read from STDIN.
  */
 public class Yapl {
     private static String progName = ""; // has to be known even on error
 
     private static SymbolTable symbolTable = new SymbolTable();
 
+    private static BackendBinSM backend = new BackendMJ();
+
+    private static CodeGen codeGen;
+
     public static void main(String[] args) throws FileNotFoundException {
         // parse per default
         boolean parse = true;
-        String path = null;
+        String srcPath = null;
+        String outPath = null;
 
-        for (String arg : args) {
-            if ("--scan-only".equalsIgnoreCase(arg)) {
+        for(int i = 0; i < args.length; i++) {
+            if ("--scan-only".equalsIgnoreCase(args[i])) {
                 parse = false;
+            } else if ("-o".equals(args[i])) {
+                if (++i < args.length) {
+                    outPath = args[i];
+                }
             } else {
-                path = arg;
+                srcPath = args[i];
             }
         }
 
-        // if no path is provided, read from STDIN
-        InputStream input = path != null ? new FileInputStream(path) : System.in;
+        // if no srcPath is provided, read from STDIN
+        InputStream input = srcPath != null ? new FileInputStream(srcPath) : System.in;
+
+        codeGen = new CodeGenBinSM(backend);
 
         Yapl parser = new Yapl(input);
 
@@ -73,10 +83,16 @@ public class Yapl {
         try {
             if (parse){
                 parser.Program();
+
+                if (outPath != null) {
+                    OutputStream output = new FileOutputStream(outPath);
+                    backend.writeObjectFile(output);
+                }
+
                 CompilerMessage.printOK(progName);
-            }
-            else
+            } else {
                 parser.PrintTokens();
+            }
 
         } catch (TokenMgrError e) {
             CompilerMessage.printError(e, progName);
@@ -84,6 +100,9 @@ public class Yapl {
             CompilerMessage.printError(e, progName);
         } catch (YaplException e) {
             CompilerMessage.printError(e, progName);
+        } catch (IOException e) {
+            System.err.println("Could not write output.");
+            e.printStackTrace();
         }
     }
 }
@@ -178,15 +197,21 @@ ASTProgram Program() throws YaplException :
 {Token name, endName;}
 {
     <PROGRAM> name=<ident> {
-    progName=name.image;
 
-    symbolTable.openScope();
+        progName=name.image;
 
-    YaplSymbol symbol = new YaplSymbol(progName, SymbolKind.Program);
-    symbolTable.setParentSymbol(symbol);
+        symbolTable.openScope();
 
-} ( Decl() | Procedure() )* <BEGIN> StatementList() <END> endName=<ident> <DOT> {
-    symbolTable.closeScope(endName.image, true, endName.beginLine, endName.beginColumn);
+        YaplSymbol symbol = new YaplSymbol(progName, SymbolKind.Program);
+        symbolTable.setParentSymbol(symbol);
+
+        codeGen.enterProc(symbol);
+
+    } ( Decl() | Procedure() )* <BEGIN> StatementList() <END> endName=<ident> <DOT> {
+
+        symbolTable.closeScope(endName.image, true, endName.beginLine, endName.beginColumn);
+        codeGen.exitProc(symbol);
+
     } <EOF> {return jjtThis;}
 }
 
