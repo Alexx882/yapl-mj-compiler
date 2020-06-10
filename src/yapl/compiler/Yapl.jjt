@@ -247,66 +247,71 @@ void PrintTokens() :
     <EOF >
 }
 
-Token RelOp() throws YaplException :
+Token RelOp() throws YaplException #void :
 {Token t;}
 {
     (t=<LT> | t=<LE> | t=<GT> | t=<GE>) {return t;}
 }
 
-Token EqualOp() throws YaplException :
+Token EqualOp() throws YaplException #void :
 {Token t;}
 {
     (t=<EQ> | t=<NE>) {return t;}
 }
 
-Token AddOp() throws YaplException :
+Token AddOp() throws YaplException #void :
 {Token t;}
 {
     (t=<ADD> | t=<SUB>) {return t;}
 }
 
-Token MulOp() throws YaplException :
+Token MulOp() throws YaplException #void :
 {Token t;}
 {
     (t=<MUL> | t=<DIV> | t=<MOD>) {return t;}
 }
 
-Type Literal() throws YaplException :
+Attrib Literal() throws YaplException #void :
 {Token t;}
 {
-    (
-        <TRUE> {jjtThis.setValue(true);}
-      | <FALSE> {jjtThis.setValue(false);}
-      | t=<number> {jjtThis.setValue(Integer.parseInt(t.image));}
-    ) { return jjtThis.getType(); }
+    <TRUE> { return new YaplAttrib(true); }
+  | <FALSE> { return new YaplAttrib(false); }
+  | t=<number> { return new YaplAttrib(Integer.parseInt(t.image)); }
 }
 
 // used to access properties of records.
 // f.e.: someRecord.someProperty
-Type Selector(Type parentType) throws YaplException :
-{Type type, resultType; Token t;}
+Attrib Selector(Attrib parent) throws YaplException :
+{Token t; Attrib index, result;}
 {
-    ( t=<L_SQ_BRACKET> type=Expr()
-    {
-        if (!parentType.isArray())
-            throw new YaplException(SelectorNotArray, t);
-        if (!type.isInt())
-            throw new YaplException(BadArraySelector, t);
+    { if (parent.getKind() != Attrib.RegAddress) codeGen.loadAddress(parent); }
+    (
+        // Array Element Selector
+        t=<L_SQ_BRACKET> index=Expr() {
+            Type parentType = parent.getType();
+            if (!parentType.isArray())
+                throw new YaplException(SelectorNotArray, t);
+            if (!index.getType().isInt())
+                throw new YaplException(BadArraySelector, t);
 
-        resultType = ((ArrayType) parentType).getElemType();
-    }
-    <R_SQ_BRACKET> | <DOT> t=<ident>
-    {
-        if (!parentType.isRecord())
-            throw new YaplException(SelectorNotRecord, t);
+            codeGen.arrayOffset(parent, index);
+            result = new YaplAttrib(Attrib.ArrayElement, ((ArrayType) parentType).getElemType());
+        } <R_SQ_BRACKET>
 
-        RecordType parentRecordType = (RecordType) parentType;
-        if (!parentRecordType.hasField(t.image))
-            throw new YaplException(InvalidRecordField, t, t, parentRecordType.name);
+        // Record Field Selector
+      | <DOT> t=<ident> {
+            Type parentType = parent.getType();
+            if (!parentType.isRecord())
+                throw new YaplException(SelectorNotRecord, t);
+            RecordType recordType = (RecordType) parentType;
+            if (!recordType.hasField(t.image))
+                throw new YaplException(InvalidRecordField, t, t, recordType.name);
 
-        resultType = parentRecordType.getFieldType(t.image);
-    }
-    ) [ resultType=Selector(resultType) ] { return resultType; }
+            codeGen.recordOffset(parent, new YaplSymbol(t.image, SymbolKind.Field));
+            result = new YaplAttrib(Attrib.RecordField, recordType.getFieldType(t.image));
+        }
+    )
+    [ result=Selector(result) ] { return result; }
 }
 
 // retrieves the length of an array.
@@ -329,97 +334,59 @@ Type ArrayLen() throws YaplException :
     }
 }
 
-Type PrimaryExpr() throws YaplException :
-{Token t; Type type;}
+Attrib PrimaryExpr() throws YaplException :
+{Token t; Attrib x;}
 {
     (
-        type=Literal() | <L_BRACKET> type=Expr() <R_BRACKET> | LOOKAHEAD(2) type=ProcedureCall() {
-            if (type.isVoid()) {
+        x=Literal() | <L_BRACKET> x=Expr() <R_BRACKET> | LOOKAHEAD(2) x=ProcedureCall() {
+            if (x.getType().isVoid()) {
                 t = ((SimpleNode) jjtree.peekNode()).jjtGetFirstToken();
                 throw new YaplException(ProcNotFuncExpr, t, t);
             }
         } | t=<ident> {
             String symbolName = t.image;
             symbolTable.checkCorrectDeclarationAsPrimaryExpression(symbolName, t.beginLine, t.beginColumn);
-            type = symbolTable.lookup(symbolName).getType();
-        } [ type=Selector(type) ]
-        | type=ArrayLen()
-    ) {return type;}
+            x = new YaplAttrib(symbolTable.lookup(symbolName));
+            codeGen.loadValue(x);
+        } [ x=Selector(x) ]
+        | x=ArrayLen()
+    ) {return x;}
 }
 
-Type UnaryExpr() throws YaplException :
-{Token t = null; Type resultType;}
+Attrib UnaryExpr() throws YaplException #void :
+{Token op = null; Attrib x;}
 {
-    [ /*jjtThis.op=*/t=AddOp() ] resultType=PrimaryExpr()
-    {
-        if (t != null && !resultType.isInt())
-            throw new YaplException(IllegalOp1Type, t, t);
-        return resultType;
-    }
+    [ op=AddOp() ] x=PrimaryExpr() { return codeGen.op1(op, x); }
 }
 
-Type MulExpr() throws YaplException :
-{Token t; Type resultType, rType;}
+Attrib MulExpr() throws YaplException #void :
+{Token op = null; Attrib x, y; Type resultType, rType;}
 {
-    resultType=UnaryExpr() ( /*jjtThis.op=*/t=MulOp() rType=UnaryExpr() /*#MulExpr*/
-        {
-            if (!resultType.isInt() || !rType.isInt())
-                throw new YaplException(IllegalOp2Type, t, t);
-            //resultType = Type.INT;
-        }
-    )*
-    { return resultType; }
+    x=UnaryExpr() ( op=MulOp() y=UnaryExpr() { x = codeGen.op2(x, op, y); } )* { return x; }
 }
 
-Type AddExpr() throws YaplException :
-{Token t; Type resultType, rType;}
+Attrib AddExpr() throws YaplException #void :
+{Token op; Attrib x, y;}
 {
-    resultType=MulExpr() ( /*jjtThis.op=*/t=AddOp() rType=MulExpr() /*#AddExpr*/
-        {
-            if (!resultType.isInt() || !rType.isInt())
-                throw new YaplException(IllegalOp2Type, t, t);
-            //resultType = Type.INT;
-        }
-    )*
-    { return resultType; }
+    x=MulExpr() ( op=AddOp() y=MulExpr() { x = codeGen.op2(x, op, y); } )* { return x; }
 }
 
-Type RelExpr() throws YaplException :
-{Token t; Type resultType, rType;}
+Attrib RelExpr() throws YaplException :
+{Token op; Attrib x, y;}
 {
-    resultType=AddExpr() [ /*jjtThis.op=*/t=RelOp() rType=AddExpr() /*#RelExpr*/
-        {
-            if (!resultType.isInt() || !rType.isInt())
-                throw new YaplException(IllegalRelOpType, t, t);
-            resultType = Type.BOOL;
-        }
-    ]
-    { return resultType; }
+    x=AddExpr() [ op=RelOp() y=AddExpr() { x = codeGen.relOp(x, op, y); } ] { return x; }
 }
 
-Type EqualExpr() throws YaplException :
-{Token t; Type resultType, rType;}
+Attrib EqualExpr() throws YaplException :
+{Token op; Attrib x, y;}
 {
-    resultType=RelExpr() [ /*jjtThis.op=*/t=EqualOp() rType=RelExpr() /*#EqualExpr*/
-        {
-            if (!resultType.equals(rType) || !(resultType.isInt() || resultType.isBool()))
-                throw new YaplException(IllegalEqualOpType, t, t);
-            resultType = Type.BOOL;
-        }
-    ]
-    { return resultType; }
+    x=RelExpr() [ op=EqualOp() y=RelExpr() { x = codeGen.equalOp(x, op, y); } ] { return x; }
 }
 
-Type CondAndExpr() throws YaplException :
-{Token t; Type resultType, rType;}
+Attrib CondAndExpr() throws YaplException :
+{Token op; Attrib x, y;}
 {
-    resultType=EqualExpr() ( t=<AND> rType=EqualExpr()
-    {
-        if (!resultType.isBool() || !rType.isBool())
-            throw new YaplException(IllegalOp2Type, t, t);
-        //resultType = Type.BOOL;
-    }
-    )* { return resultType; }
+    x=EqualExpr() ( op=<AND> y=EqualExpr() { x = codeGen.op2(x, op, y); } )* { return x; }
 }
 
 Type CreationExpr() throws YaplException :
@@ -439,18 +406,12 @@ Type CreationExpr() throws YaplException :
     }
 }
 
-Type Expr() throws YaplException :
-{Token t; Type rType, resultType;}
+Attrib Expr() throws YaplException :
+{Token op; Attrib x, y;}
 {
-    (
-        resultType=CondAndExpr() ( t=<OR> rType=CondAndExpr()
-        {
-            if (!resultType.isBool() || !rType.isBool())
-                throw new YaplException(IllegalOp2Type, t, t);
-            //resultType = Type.BOOL;
-        }
-        )* | resultType=CreationExpr()
-    ) { return resultType; }
+    x=CondAndExpr() ( op=<OR> y=CondAndExpr() { x = codeGen.op2(x, op, y); } )* { return x; }
+
+  | x=CreationExpr() { return x; }
 }
 
 void CondExpr() throws YaplException #void :

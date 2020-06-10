@@ -367,7 +367,7 @@ public interface BackendBinSM
      * Parameters are passed on the expression stack -
      * last parameter is on top of stack.
      * Called procedure pushes return value to expression stack.
-     * @param name     address label of procedure used with
+     * @param label     address label of procedure used with
      *                 {@link #enterProc(String, int, boolean)}
      *                 (usually the procedure name).
      */

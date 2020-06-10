@@ -2,18 +2,21 @@ package yapl.impl;
 
 import yapl.compiler.Token;
 import yapl.interfaces.Attrib;
-import yapl.interfaces.BackendBinSM;
 import yapl.interfaces.CodeGen;
+import yapl.interfaces.ExtendedBackendBinSM;
 import yapl.interfaces.Symbol;
 import yapl.lib.*;
+
+import static yapl.compiler.YaplConstants.*;
+import static yapl.impl.ErrorType.*;
 
 /**
  * Implementation of CodeGen interface generating binary code for stack machines.
  */
 public class CodeGenBinSM implements CodeGen {
-    private BackendBinSM backend;
+    private ExtendedBackendBinSM backend;
 
-    public CodeGenBinSM(BackendBinSM backend) {
+    public CodeGenBinSM(ExtendedBackendBinSM backend) {
         this.backend = backend;
     }
 
@@ -24,7 +27,7 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void assignLabel(String label) {
-
+        backend.assignLabel(label);
     }
 
     @Override
@@ -94,22 +97,125 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public Attrib op1(Token op, Attrib x) throws YaplException {
-        return null;
+        if (op == null)
+            return x;
+
+        if (!x.getType().isInt())
+            throw new YaplException(IllegalOp1Type, op, op);
+
+        switch (op.kind) {
+            case ADD:
+                return x;
+
+            case SUB:
+                backend.neg();
+                break;
+
+            default:
+                throw new YaplException(Internal, -1, -1, "Illegal Op1 operation.");
+        }
+
+        return new YaplAttrib(Attrib.RegValue, Type.INT);
     }
 
     @Override
     public Attrib op2(Attrib x, Token op, Attrib y) throws YaplException {
-        return null;
+        if (!x.getType().equals(y.getType()))
+            throw new YaplException(IllegalOp2Type, op, op);
+
+        boolean intOp = true;
+
+        switch (op.kind) {
+            case ADD:
+                backend.add();
+                break;
+
+            case SUB:
+                backend.sub();
+                break;
+
+            case MUL:
+                backend.mul();
+                break;
+
+            case DIV:
+                backend.div();
+                break;
+
+            case MOD:
+                backend.mod();
+                break;
+
+            case AND:
+                backend.and();
+                intOp = false;
+                break;
+
+            case OR:
+                backend.or();
+                intOp = false;
+                break;
+
+            default:
+                throw new YaplException(Internal, -1, -1, "Illegal Op2 operation.");
+        }
+
+        if (intOp && !x.getType().isInt() || !intOp && !x.getType().isBool())
+            throw new YaplException(IllegalOp2Type, op, op);
+
+        return new YaplAttrib(Attrib.RegValue, x.getType());
     }
 
     @Override
     public Attrib relOp(Attrib x, Token op, Attrib y) throws YaplException {
-        return null;
+        if (!(x.getType().isInt() && y.getType().isInt()))
+            throw new YaplException(IllegalRelOpType, op, op);
+
+        switch (op.kind) {
+            case LT:
+                backend.isLess();
+                break;
+
+            case LE:
+                backend.isLessOrEqual();
+                break;
+
+            case GE:
+                backend.isGreaterOrEqual();
+                break;
+
+            case GT:
+                backend.isGreater();
+                break;
+
+            default:
+                throw new YaplException(Internal, -1, -1, "Illegal RelOp operation.");
+        }
+
+        return new YaplAttrib(Attrib.RegValue, Type.BOOL);
     }
 
     @Override
     public Attrib equalOp(Attrib x, Token op, Attrib y) throws YaplException {
-        return null;
+        Type xType = x.getType(), yType = y.getType();
+        if (!(xType.isInt() && yType.isInt()
+                || xType.isBool() && yType.isBool()))
+            throw new YaplException(IllegalEqualOpType, op, op);
+
+        switch (op.kind) {
+            case EQ:
+                backend.isEqual();
+                break;
+
+            case NE:
+                backend.isNotEqual();
+                break;
+
+            default:
+                throw new YaplException(Internal, -1, -1, "Illegal EqualOp operation.");
+        }
+
+        return new YaplAttrib(Attrib.RegValue, Type.BOOL);
     }
 
     @Override
@@ -120,7 +226,7 @@ public class CodeGenBinSM implements CodeGen {
         if (!isMain) {
             Type type = proc.getType();
             if (!type.isProcedure())
-                throw new YaplException(ErrorType.Internal, -1, -1, "Procedure symbol type is not procedure.");
+                throw new YaplException(Internal, -1, -1, "Procedure symbol type is not procedure.");
 
             ProcedureType procType = (ProcedureType) type;
 
