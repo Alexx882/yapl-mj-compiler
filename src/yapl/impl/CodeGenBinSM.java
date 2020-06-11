@@ -87,7 +87,11 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public Attrib arrayLength(Attrib arr) throws YaplException {
-        return null;
+        if (arr.getKind() != Attrib.RegAddress)
+            loadAddress(arr);
+
+        backend.arrayLength();
+        return new YaplAttrib(Attrib.RegValue, Type.INT);
     }
 
     @Override
@@ -253,7 +257,8 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public Attrib callProc(Symbol proc, Attrib[] args) throws YaplException {
-        return null;
+
+        return new YaplAttrib(((ProcedureType) proc.getType()).getReturnType());
     }
 
     @Override

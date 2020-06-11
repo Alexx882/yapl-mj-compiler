@@ -16,16 +16,40 @@ public class YaplAttrib implements Attrib {
 
     private int value;
 
+    /**
+     * Shortcut for constructing a INT constant.
+     *
+     * @param value the constant value
+     */
     public YaplAttrib(int value) {
         this.value = value;
         this.type = Type.INT;
         this.kind = Attrib.Constant;
     }
 
+    /**
+     * Shortcut for constructing a BOOL constant.
+     *
+     * @param value the constant value
+     */
     public YaplAttrib(boolean value) {
         this.value = (new BackendMJ()).boolValue(value);
         this.type = Type.BOOL;
         this.kind = Attrib.Constant;
+    }
+
+    /**
+     * Shortcut for constructing a value on the expression stack.
+     *
+     * @param type the type of the value
+     */
+    public YaplAttrib(Type type) {
+        this.type = type;
+
+        if (type.isBool() || type.isInt())
+            kind = Attrib.RegValue;
+        else
+            kind = Attrib.RegAddress;
     }
 
     public YaplAttrib(int kind, Type type) {
@@ -34,14 +58,21 @@ public class YaplAttrib implements Attrib {
     }
 
     public YaplAttrib(Symbol symbol) throws YaplException {
-        kind = symbol.getKind();
 
-        if (kind == Symbol.Constant)
-            constant = true;
-        else if (kind == Symbol.Typename)
-            kind = Symbol.Variable;
-        else if (kind != Symbol.Variable)
-            throw new YaplException(ErrorType.Internal, -1, -1, "Illegal Attrib kind.");
+        switch (symbol.getKind()) {
+            case Symbol.Constant:
+                constant = true;
+                kind = Attrib.Constant;
+                break;
+
+            case Symbol.Variable:
+            case Symbol.Parameter:
+                kind = Attrib.MemoryOperand;
+                break;
+
+            default:
+                throw new YaplException(ErrorType.Internal, -1, symbol.getKind(), "Illegal Attrib kind.");
+        }
 
         global = symbol.isGlobal();
         readonly = symbol.isReadonly();
