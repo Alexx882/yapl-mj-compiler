@@ -1,7 +1,9 @@
 package yapl.impl;
 
 import yapl.interfaces.BackendBinSM;
+import yapl.interfaces.ExtendedBackendBinSM;
 import yapl.interfaces.MemoryRegion;
+import yapl.lib.YaplException;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -14,7 +16,7 @@ import static yapl.impl.Instruction.*;
  *
  * @author Herold, Jakobitsch, Lercher
  */
-public class BackendMJ implements BackendBinSM {
+public class BackendMJ implements ExtendedBackendBinSM {
 
     private static final byte ZERO = 0;
 
@@ -115,12 +117,17 @@ public class BackendMJ implements BackendBinSM {
 
     @Override
     public int boolValue(boolean value) {
+        return staticBoolValue(value);
+    }
+
+    public static int staticBoolValue(boolean value) {
         return value ? 1 : 0;
     }
 
     @Override
     public void assignLabel(String label) {
-        codeAddressForLabels.put(label, getNextCodeBufferAdress());
+        if (codeAddressForLabels.putIfAbsent(label, getNextCodeBufferAdress()) != null)
+            throw new IllegalStateException("Label already exists.");
     }
 
     /**
@@ -448,6 +455,12 @@ public class BackendMJ implements BackendBinSM {
     @Override
     public void isEqual() {
         compare(jeq);
+    }
+
+    @Override
+    public void isNotEqual() {
+        isEqual();
+        not();
     }
 
     @Override
