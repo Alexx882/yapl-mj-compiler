@@ -189,7 +189,7 @@ public class BackendMJ implements ExtendedBackendBinSM {
 
     @Override
     public int allocStaticData(int words) {
-        int sizeBeforeNewString = staticDataBuffer.size();
+        int sizeBeforeNewString = staticDataBuffer.size() / 4;
 
         for (int i = 0; i < words * wordSize(); ++i)
             staticDataBuffer.add(ZERO);

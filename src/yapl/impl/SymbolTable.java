@@ -215,22 +215,8 @@ public class SymbolTable implements Symboltable {
     private static Scope getYaplPredefinedScope() {
         Scope predefScope = new Scope(true);
 
-        LinkedList<ProcedureType> predef = new LinkedList<>();
-
-        ProcedureType writeint = new ProcedureType("writeint", Type.VOID);
-        writeint.addParam("i", Type.INT);
-        predef.add(writeint);
-
-        ProcedureType writebool = new ProcedureType("writebool", Type.VOID);
-        writebool.addParam("b", Type.BOOL);
-        predef.add(writebool);
-
-        predef.add(new ProcedureType("writeln", Type.VOID));
-
-        predef.add(new ProcedureType("readint", Type.INT));
-
-        for (ProcedureType procedure : predef)
-            predefScope.putSymbol(procedure.name, new YaplSymbol(procedure.name, SymbolKind.Procedure, procedure));
+        for (PredefinedFunction proc : PredefinedFunction.values())
+            predefScope.putSymbol(proc.name(), new YaplSymbol(proc.name(), SymbolKind.Procedure, proc.procedureType));
 
         return predefScope;
     }

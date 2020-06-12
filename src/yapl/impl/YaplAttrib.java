@@ -22,9 +22,8 @@ public class YaplAttrib implements Attrib {
      * @param value the constant value
      */
     public YaplAttrib(int value) {
-        this.value = value;
-        this.type = Type.INT;
-        this.kind = Attrib.Constant;
+        this(Attrib.Constant, Type.INT);
+        setValue(value);
     }
 
     /**
@@ -33,9 +32,8 @@ public class YaplAttrib implements Attrib {
      * @param value the constant value
      */
     public YaplAttrib(boolean value) {
-        this.value = (new BackendMJ()).boolValue(value);
-        this.type = Type.BOOL;
-        this.kind = Attrib.Constant;
+        this(Attrib.Constant, Type.BOOL);
+        setValue(value);
     }
 
     /**
@@ -62,8 +60,6 @@ public class YaplAttrib implements Attrib {
         switch (symbol.getKind()) {
             case Symbol.Constant:
                 constant = true;
-                kind = Attrib.Constant;
-                break;
 
             case Symbol.Variable:
             case Symbol.Parameter:
@@ -78,6 +74,25 @@ public class YaplAttrib implements Attrib {
         readonly = symbol.isReadonly();
         type = symbol.getType();
         offset = symbol.getOffset();
+    }
+
+    public YaplAttrib(Attrib attr) throws YaplException {
+        kind = attr.getKind();
+        global = attr.isGlobal();
+        readonly = attr.isReadonly();
+        constant = attr.isConstant();
+        type = attr.getType();
+        offset = attr.getOffset();
+    }
+
+    public void setValue(int value) {
+        this.value = value;
+        this.type = Type.INT;
+    }
+
+    public void setValue(boolean value) {
+        this.value = BackendMJ.staticBoolValue(value);
+        this.type = Type.BOOL;
     }
 
     public int getValue() {

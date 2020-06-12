@@ -205,7 +205,7 @@ void Program() throws YaplException :
         YaplSymbol symbol = new YaplSymbol(progName, SymbolKind.Program);
         symbolTable.setParentSymbol(symbol);
 
-    } ( Decl() | Procedure() )*
+    } ( Decl(true) | Procedure() )*
     <BEGIN> { codeGen.enterProc(symbol); } StatementList()
     <END> endName=<ident> <DOT> {
 
@@ -550,9 +550,9 @@ void ReturnStatement() throws YaplException :
 }
 
 void WriteStatement() throws YaplException :
-{}
+{Token s;}
 {
-    <WRITE> jjtThis.value=<string>
+    <WRITE> s=<string> { codeGen.writeString(s.image.substring(1, s.image.length() - 1)); } // strip quotes
 }
 
 void Statement() throws YaplException #void :
@@ -571,7 +571,7 @@ void Block() throws YaplException :
 {}
 {
     { symbolTable.openScope(); }
-    [ Decl() ] <BEGIN> StatementList() <END>
+    [ Decl(false) ] <BEGIN> StatementList() <END>
     { symbolTable.closeScope(); }
 }
 
@@ -607,33 +607,42 @@ Type ReturnType() throws YaplException #void :
 // declares a constant in the current scope
 // f.e.: Const len = 10;
 // throws an exception if the identifier already exists
-void ConstDecl() throws YaplException :
+void ConstDecl(boolean global) throws YaplException :
 {Token t; Attrib x;}
 {
     <CONST> t=<ident>
     {
         Symbol s = new YaplSymbol(t.image, SymbolKind.Constant);
+        s.setGlobal(global);
+        s.setReadonly(true);
         symbolTable.addSymbol(s, t.beginLine, t.beginColumn);
     }
-    <CONST_ASSIGN> x=Literal()
-    { s.setType(x.getType()); }
-    <SEMICOLON>
+    <CONST_ASSIGN> x=Literal() <SEMICOLON>
+    {
+        s.setType(x.getType());
+        codeGen.assign(new YaplAttrib(s), x);
+        // apply offset that was set in CodeGen to the symbol
+        s.setOffset(x.getOffset());
+    }
+
 }
 
 // declares a constant in the current scope
 // f.e.: int i, j;
 // throws an exception if the identifier already exists
-void VarDecl() throws YaplException :
+void VarDecl(boolean global) throws YaplException :
 {Token t; Type type; Symbol s;}
 {
     type=Type() t=<ident>
     {
         s = new YaplSymbol(t.image, SymbolKind.Variable, type);
+        s.setGlobal(global);
         symbolTable.addSymbol(s, t.beginLine, t.beginColumn);
     }
     ( <COMMA> t=<ident>
         {
             s = new YaplSymbol(t.image, SymbolKind.Variable, type);
+            s.setGlobal(global);
             symbolTable.addSymbol(s, t.beginLine, t.beginColumn);
         }
     )* <SEMICOLON>
@@ -663,23 +672,24 @@ void FieldDecl(RecordType recordType) throws YaplException :
 // declares a Record in the current scope
 // as in : RECORD
 // throws an exception if the identifier already exists
-void TypeDecl() throws YaplException :
+void TypeDecl(boolean global) throws YaplException :
 {Token t;}
 {
     <RECORD> t=<ident>
     {
         RecordType recordType = new RecordType(t.image);
         YaplSymbol s = new YaplSymbol(t.image, SymbolKind.Typename, recordType);
+        s.setGlobal(global);
         symbolTable.openScope(s, t.beginLine, t.beginColumn);
     }
     FieldDecl(recordType) ( FieldDecl(recordType) )* <ENDRECORD> <SEMICOLON>
     { symbolTable.closeScope(); }
 }
 
-void Decl() throws YaplException #Declarations :
+void Decl(boolean global) throws YaplException #Declarations :
 {}
 {
-    <DECLARE> ( ConstDecl() | VarDecl() | TypeDecl() )*
+    <DECLARE> ( ConstDecl(global) | VarDecl(global) | TypeDecl(global) )*
 }
 
 void FormalParam(ProcedureType procedure) throws YaplException #void :

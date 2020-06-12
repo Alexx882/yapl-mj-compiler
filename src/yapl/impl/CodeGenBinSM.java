@@ -7,14 +7,22 @@ import yapl.interfaces.ExtendedBackendBinSM;
 import yapl.interfaces.Symbol;
 import yapl.lib.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static yapl.compiler.YaplConstants.*;
 import static yapl.impl.ErrorType.*;
+import static yapl.interfaces.MemoryRegion.*;
 
 /**
  * Implementation of CodeGen interface generating binary code for stack machines.
  */
 public class CodeGenBinSM implements CodeGen {
-    private ExtendedBackendBinSM backend;
+    private final ExtendedBackendBinSM backend;
+
+    private int labelCounter = 0;
+
+    private List<YaplAttrib> globalDeclarations = new ArrayList<>();
 
     public CodeGenBinSM(ExtendedBackendBinSM backend) {
         this.backend = backend;
@@ -22,7 +30,7 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public String newLabel() {
-        return null;
+        return "label " + labelCounter++;
     }
 
     @Override
@@ -32,7 +40,23 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public byte loadValue(Attrib attr) throws YaplException {
-        return 0;
+        switch (attr.getKind()) {
+            case Attrib.Constant:
+                if (!(attr instanceof YaplAttrib))
+                    throw new IllegalStateException("Need value for constant load.");
+                backend.loadConst(((YaplAttrib) attr).getValue());
+                break;
+
+            case Attrib.MemoryOperand:
+                backend.loadWord(attr.isGlobal() ? STATIC : STACK, attr.getOffset());
+                break;
+
+            default:
+                throw new IllegalStateException("Not implemented.");
+        }
+
+        attr.setKind(Attrib.RegValue);
+        return 0; // return register number not needed for stack machine
     }
 
     @Override
@@ -47,7 +71,17 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void allocVariable(Symbol sym) throws YaplException {
-
+        switch (sym.getKind()) {
+            case Symbol.Constant:
+                int offset;
+                if (sym.isGlobal()) {
+                    offset = backend.allocStaticData(1);
+                } else {
+                    offset = backend.allocStack(1);
+                }
+                sym.setOffset(offset);
+                break;
+        }
     }
 
     @Override
@@ -96,7 +130,31 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void assign(Attrib lvalue, Attrib expr) throws YaplException {
+        if (!lvalue.getType().equals(expr.getType()))
+            throw new IllegalStateException("Assignment type mismatch");
 
+        if (lvalue.isGlobal() && lvalue.isConstant()) {
+            var constDecl = new YaplAttrib(lvalue);
+            constDecl.setValue(((YaplAttrib) expr).getValue());
+            constDecl.setOffset(backend.allocStaticData(1));
+
+            globalDeclarations.add(constDecl);
+            return;
+        }
+
+        switch (lvalue.getKind()) {
+            case Attrib.MemoryOperand:
+                int offset;
+                if (lvalue.isGlobal()) {
+                    offset = backend.allocStaticData(1);
+                    backend.storeWord(STATIC, offset);
+                } else {
+                    offset = backend.allocStack(1);
+                    backend.storeWord(STACK, offset);
+                }
+                lvalue.setOffset(offset);
+                break;
+        }
     }
 
     @Override
@@ -242,6 +300,13 @@ public class CodeGenBinSM implements CodeGen {
         String label = proc.getName() + " " + proc.hashCode();
 
         backend.enterProc(label, nParams, isMain);
+
+        if (isMain) {
+            for (var decl : globalDeclarations) {
+                backend.loadConst(decl.getValue());
+                backend.storeWord(STATIC, decl.getOffset());
+            }
+        }
     }
 
     @Override
@@ -257,22 +322,66 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public Attrib callProc(Symbol proc, Attrib[] args) throws YaplException {
+        for (PredefinedFunction predefFunc : PredefinedFunction.values())
+            if (predefFunc.procedureType == proc.getType())
+                return callPredefinedFunction(predefFunc, args);
 
         return new YaplAttrib(((ProcedureType) proc.getType()).getReturnType());
     }
 
+    public Attrib callPredefinedFunction(PredefinedFunction f, Attrib[] args) throws YaplException {
+        Type returnType = Type.VOID;
+
+        switch (f) {
+            case writeint:
+                backend.writeInteger();
+                break;
+
+            case writebool:
+                String elseLabel = newLabel(), endIfLabel = newLabel();
+
+                // if
+                branchIfFalse(args[0], elseLabel);
+                // then
+                writeString("True");
+                jump(endIfLabel);
+                // else
+                assignLabel(elseLabel);
+                writeString("False");
+                // endif
+                assignLabel(endIfLabel);
+                break;
+
+            case writeln:
+                writeString(System.lineSeparator());
+                break;
+
+            case readint:
+//                backend.readInteger();
+//                returnType = Type.INT;
+//                break;
+                throw new IllegalStateException("readint() is not implemented");
+
+            default:
+                throw new IllegalStateException("Predefined function not implemented.");
+        }
+
+        return new YaplAttrib(returnType);
+    }
+
     @Override
     public void writeString(String string) throws YaplException {
-
+        int addr = backend.allocStringConstant(string);
+        backend.writeString(addr);
     }
 
     @Override
     public void branchIfFalse(Attrib condition, String label) throws YaplException {
-
+        backend.branchIf(false, label);
     }
 
     @Override
     public void jump(String label) {
-
+        backend.jump(label);
     }
 }
