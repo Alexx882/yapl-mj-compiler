@@ -4,8 +4,8 @@ import yapl.compiler.Token;
 import yapl.interfaces.*;
 import yapl.lib.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import static yapl.compiler.YaplConstants.*;
 import static yapl.impl.ErrorType.*;
@@ -19,7 +19,7 @@ public class CodeGenBinSM implements CodeGen {
 
     private int labelCounter = 0;
 
-    private List<YaplAttrib> globalDeclarations = new ArrayList<>();
+    private final Map<Attrib, Integer> globalConstantAssignments = new HashMap<>();
 
     public CodeGenBinSM(ExtendedBackendBinSM backend) {
         this.backend = backend;
@@ -128,25 +128,16 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void assign(Attrib lvalue, Attrib expr) throws YaplException {
-        switch (lvalue.getKind()){
-            case Attrib.MemoryOperand:
-                break;
-
-            case Attrib.ArrayElement:
-                break;
-        }
+        // TODO make sure that lvalue address is on stack if lvalue is array or record
 
         if (!lvalue.getType().equals(expr.getType()))
             throw new IllegalStateException("Assignment type mismatch");
 
+        // special treatment for global constants, since they need code to assign values,
+        // but code is only executed after the startPC
+        // solution: move value assignment to start of main procedure
         if (lvalue.isGlobal() && lvalue.isConstant()) {
-            var constDecl = new YaplAttrib(lvalue);
-            constDecl.setValue(((YaplAttrib) expr).getValue());
-            constDecl.setOffset(lvalue.getOffset());
-
-            globalDeclarations.add(constDecl);
-
-            lvalue.setOffset(constDecl.getOffset());
+            globalConstantAssignments.put(lvalue,((YaplAttrib) expr).getValue());
             return;
         }
 
@@ -155,8 +146,10 @@ public class CodeGenBinSM implements CodeGen {
                 backend.storeWord(lvalue.isGlobal() ? STATIC : STACK, lvalue.getOffset());
                 break;
 
-            case Attrib.ArrayElement:
-                break;
+            // TODO assignments for array elements, record fields
+
+            default:
+                throw new YaplException(Internal, -1, -1, "Not implemented yet");
         }
     }
 
@@ -304,10 +297,12 @@ public class CodeGenBinSM implements CodeGen {
 
         backend.enterProc(label, nParams, isMain);
 
+        // insert global constant assignments here
         if (isMain) {
-            for (var decl : globalDeclarations) {
+            for (var decl : globalConstantAssignments.entrySet()) {
+                // globalConstantAssignments maps: <Attrib representing a const var> to <integer value of the const var>
                 backend.loadConst(decl.getValue());
-                backend.storeWord(STATIC, decl.getOffset());
+                backend.storeWord(STATIC, decl.getKey().getOffset());
             }
         }
     }

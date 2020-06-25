@@ -623,6 +623,7 @@ void ConstDecl(boolean global) throws YaplException :
     {
         // type depends on literal
         s.setType(x.getType());
+        // assign value to constant
         codeGen.assign(new YaplAttrib(s), x);
     }
 }
