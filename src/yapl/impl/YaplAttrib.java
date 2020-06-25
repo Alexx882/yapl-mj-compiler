@@ -161,12 +161,11 @@ public class YaplAttrib implements Attrib {
 
     @Override
     public byte getRegister() {
-        // not needed for stack machine
-        return 0;
+        throw new UnsupportedOperationException("not needed for stack machine");
     }
 
     @Override
     public void setRegister(byte register) {
-        // not needed for stack machine
+        throw new UnsupportedOperationException("not needed for stack machine");
     }
 }

@@ -297,6 +297,7 @@ public class BackendMJ implements ExtendedBackendBinSM {
     @Override
     public void allocArray() {
         addInstructionToCodeBuffer(newarray);
+        // operand is "type". 0: bool, 1: int
         addExplicitOperandToCodeBuffer(1, OperandType.s8);
     }
 

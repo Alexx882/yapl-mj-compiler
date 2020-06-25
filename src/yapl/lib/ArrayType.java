@@ -19,6 +19,10 @@ public class ArrayType extends Type {
         this.baseType = baseType;
     }
 
+    public int getDim(){
+        return dim;
+    }
+
     /**
      * subarray(this): the array type this' derived from this by omitting the first dimension,
      * @return subarray(this)
