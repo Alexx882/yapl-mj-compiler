@@ -2,7 +2,7 @@
   <configuration default="false" name="Yapl" type="Application" factoryName="Application" nameIsGenerated="true">
     <option name="MAIN_CLASS_NAME" value="yapl.compiler.Yapl" />
     <module name="yapl-mj-compiler" />
-    <option name="PROGRAM_PARAMETERS" value="$ProjectFileDir$\testfiles\typecheck\test53.yapl -o $ProjectFileDir$\testfiles\typecheck\test53.mj" />
+    <option name="PROGRAM_PARAMETERS" value="$ProjectFileDir$\testfiles\codegen\test03.yapl -o $ProjectFileDir$\testfiles\codegen\test03.mj" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="yapl.compiler.*" />

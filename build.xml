@@ -26,9 +26,10 @@
     <property name="mj-jar" location="mjvm/mj.jar"/>
     <property name="version" value="parser"/>
     <property name="test-file" value="test01"/>
-    <property name="yapl" location="testfiles/${version}/${test-file}.yapl"/>
-    <property name="outfile" value="${yapl}.mj"/>
-    <property name="log" value="${yapl}.log"/>
+    <property name="yapl-path" location="testfiles/${version}/${test-file}"/>
+    <property name="yapl" location="${yapl-path}.yapl"/>
+    <property name="outfile" value="${yapl-path}.mj"/>
+    <property name="log" value="${yapl-path}.log"/>
     <property name="grammar" value="Yapl"/>
     <property name="grammar-dir" value="${src}/yapl/compiler"/>
     <property name="grammar-path" value="${grammar-dir}/${grammar}"/>
@@ -36,8 +37,8 @@
     <property name="simple-input" value="abc" description="Input for the simple scanner"/>
     <property name="runtimelib" value="${grammar-dir}/runtimelib.yapl"/>
 
-    <property name="execlog" value="${yapl}.execlog"/>
-    <property name="truefile" value="${yapl}.true"/>
+    <property name="execlog" value="${yapl-path}.execlog"/>
+    <property name="truefile" value="${yapl-path}.true"/>
 
     <!-- test files for code generating compiler -->
     <property name="test-dir" location="testfiles/codegen"/>
@@ -56,7 +57,7 @@
 
     <target name="clean" description="remove generated files">
         <delete>
-            <fileset dir="." includes="**/*.mj **/*.txt **/*.exec **/*.log **/*.PASSED **/*.FAILED"
+            <fileset dir="." includes="**/*.mj **/*.txt **/*.exec **/*.log **/*.execlog **/*.PASSED **/*.FAILED"
                      excludes="**/*README*"/>
         </delete>
         <delete dir="${build}"/>
@@ -161,6 +162,7 @@
     <target name="eval-all" description="evaluate all test cases of a given compiler 'version'" depends="compile-java">
         <var name="npassed" value="0"/>
         <var name="ntotal" value="0"/>
+        <var name="failed" value=""/>
         <delete dir="testfiles/${version}" includes="*.PASSED *.FAILED *.log"/>
         <for param="yapl">
             <path>
@@ -171,6 +173,7 @@
                     <try>
                         <antcall target="eval-compiler-msg">
                             <param name="yapl" value="@{yapl}"/>
+                            <param name="outfile" value="@{yapl}.mj"/>
                             <param name="log" value="@{yapl}.log"/>
                         </antcall>
                         <echo>@{yapl}: PASSED</echo>
@@ -181,6 +184,8 @@
                     <catch>
                         <echo>@{yapl}: FAILED</echo>
                         <touch file="@{yapl}.FAILED"/>
+                        <!--suppress AntResolveInspection -->
+                        <var name="failed" value="${failed} @{yapl}"/>
                     </catch>
                 </trycatch>
                 <!--suppress AntResolveInspection -->
@@ -188,6 +193,7 @@
             </sequential>
         </for>
         <echo>Tests passed: ${npassed}/${ntotal}</echo>
+<!--        <echo>Failed: ${failed}</echo>-->
     </target>
 
     <target name="eval-codegen" depends="exec"
@@ -201,9 +207,11 @@
         </fail>
     </target>
 
-    <target name="eval-all-codegen" description="evaluate all test cases of code generating compiler">
+    <target name="eval-all-codegen" depends="compile-java"
+            description="evaluate all test cases of code generating compiler">
         <var name="npassed" value="0"/>
         <var name="ntotal" value="0"/>
+        <var name="failed" value=""/>
         <for param="testname" list="${test-files}">
             <sequential>
                 <trycatch>
@@ -221,6 +229,9 @@
                     </try>
                     <catch>
                         <echo>@{testname}: FAILED</echo>
+                        <touch file="${test-dir}/@{testname}.FAILED"/>
+                        <!--suppress AntResolveInspection -->
+                        <var name="failed" value="${failed} @{testname}"/>
                     </catch>
                 </trycatch>
                 <!--suppress AntResolveInspection -->
@@ -228,6 +239,7 @@
             </sequential>
         </for>
         <echo>Tests passed: ${npassed}/${ntotal}</echo>
+<!--        <echo>Failed: ${failed}</echo>-->
     </target>
 
 </project>
