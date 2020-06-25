@@ -499,19 +499,30 @@ void Assignment() throws YaplException :
 }
 
 void IfStatement() throws YaplException :
-{Attrib cond;}
+{Attrib cond; String elseLabel = codeGen.newLabel(), endIfLabel = codeGen.newLabel();}
 {
     <IF> cond=CondExpr()
+    { codeGen.branchIfFalse(cond, elseLabel); }
     <THEN> StatementList()
+    {
+        codeGen.jump(endIfLabel);
+        codeGen.assignLabel(elseLabel);
+    }
     [ <ELSE> StatementList() ]
+    { codeGen.assignLabel(endIfLabel); }
     <ENDIF>
 }
 
 void WhileStatement() throws YaplException :
-{Attrib cond;}
+{Attrib cond; String whileLabel = codeGen.newLabel(), endWhileLabel = codeGen.newLabel();}
 {
-    <WHILE> cond=CondExpr()
+    { codeGen.assignLabel(whileLabel); }
+    <WHILE> cond=CondExpr() { codeGen.branchIfFalse(cond, endWhileLabel); }
     <DO> StatementList()
+    {
+        codeGen.jump(whileLabel);
+        codeGen.assignLabel(endWhileLabel);
+    }
     <ENDWHILE>
 }
 
