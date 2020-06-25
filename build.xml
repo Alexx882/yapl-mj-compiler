@@ -36,7 +36,8 @@
     <property name="debug" value="false"/>
     <property name="simple-input" value="abc" description="Input for the simple scanner"/>
     <property name="runtimelib" value="${grammar-dir}/runtimelib.yapl"/>
-    <property name="exe" location="testfiles/codegen/test04.mj" description="Used for decode"/>
+    <property name="nexe" value="test13" description="Used for decode"/>
+    <property name="exe" location="testfiles/codegen/${nexe}.mj" description="Used for decode"/>
 
     <property name="execlog" value="${yapl-path}.execlog"/>
     <property name="truefile" value="${yapl-path}.true"/>

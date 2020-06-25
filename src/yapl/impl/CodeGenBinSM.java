@@ -52,7 +52,7 @@ public class CodeGenBinSM implements CodeGen {
                 throw new IllegalStateException("Not implemented.");
         }
 
-        // fixme why is the kind changed? const (3) will be changed to 1 and not working anymore
+        // fixme why was the kind changed? const (3) will be changed to 1 and not working anymore
 //        attr.setKind(Attrib.RegValue);
         return 0; // return register number not needed for stack machine
     }
@@ -323,15 +323,25 @@ public class CodeGenBinSM implements CodeGen {
             if (predefFunc.procedureType == proc.getType())
                 return callPredefinedFunction(predefFunc, args);
 
-        for (Attrib arg : args) {
-            if (arg.getType().isPrimitive()) {
-                System.out.println("\t" + arg.getType().isPrimitive() + " " + arg.getKind() + " " + ((YaplAttrib)arg).getValue());
-                this.loadValue(arg);
-            } else {
-                // complex type
-                // todo
-            }
-        }
+        /*
+        * Info: currently all arguments for a procedure call are calculated immediately.
+        * eg. f(1+1, a or b) will immediately: const1, const1, add, <a or b ie const1/0),
+        * so the values are already on the stack.
+        * This is probably fine, but must not be forgotten.
+        */
+
+//        int cnt = 0;
+//        for (Attrib arg : args) {
+//            if (arg.getType().isPrimitive()) {
+//                System.out.println("\t" + arg.getType().isPrimitive() + " " + arg.getKind() + " " + ((YaplAttrib)arg).getValue());
+//                arg.setOffset(cnt++);
+//                this.loadValue(arg);
+//            } else {
+//                // complex type
+//                // todo
+//            }
+//        }
+
         backend.callProc(Procedure.getLabel(proc, false));
 
         return new YaplAttrib(((ProcedureType) proc.getType()).getReturnType());

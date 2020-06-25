@@ -722,9 +722,10 @@ void FormalParam(ProcedureType procedure) throws YaplException #void :
 {
     type=Type() t=<ident>
     {
+        int offset = procedure.addParam(t.image, type);
         Symbol s = new YaplSymbol(t.image, SymbolKind.Parameter, type);
+        s.setOffset(offset);
         symbolTable.addSymbol(s, t.beginLine, t.beginColumn);
-        procedure.addParam(t.image, type);
     }
 }
 
