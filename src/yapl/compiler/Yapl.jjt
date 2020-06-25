@@ -279,11 +279,7 @@ Attrib Literal() throws YaplException #void :
       | <FALSE> { x = new YaplAttrib(false); }
       | t=<number> { x = new YaplAttrib(Integer.parseInt(t.image)); }
     )
-    {
-         codeGen.loadValue(x);
-         System.out.println(x.getKind() + " " + x.getValue());
-         return x;
-    }
+    { codeGen.loadValue(x); return x; }
 }
 
 // used to access properties of records.
@@ -291,7 +287,7 @@ Attrib Literal() throws YaplException #void :
 Attrib Selector(Attrib parent) throws YaplException :
 {Token t; Attrib index, result;}
 {
-    { if (parent.getKind() != Attrib.RegAddress) codeGen.loadAddress(parent); }
+    { if (parent.getKind() != Attrib.RegValue) codeGen.loadValue(parent); }
     (
         // Array Element Selector
         t=<L_SQ_BRACKET> index=Expr() {
@@ -415,19 +411,20 @@ Attrib CreationExpr() throws YaplException :
         if (!size.getType().isInt())
             throw new YaplException(BadArraySelector, tArray);
         dim++;
-        // load the array length on stack
-        codeGen.loadValue(size);
     } )*
     {
-        if (dim == 0 && !type.isRecord())
+        if (dim != 0) {
+            // is array
+            ArrayType arrayType = new ArrayType(dim, type);
+            return codeGen.allocArray(arrayType);
+
+        } else if (type.isRecord()) {
+            // is record
+            return new YaplAttrib(Attrib.RegAddress, type);
+
+        } else {
             throw new YaplException(InvalidNewType, tNew);
-        if (dim != 0){
-            // array
-            type = new ArrayType(dim, type);
-            Attrib res = codeGen.allocArray((ArrayType)type);
-//            codeGen.arra
         }
-        return new YaplAttrib(Attrib.RegAddress, type);
     }
 }
 

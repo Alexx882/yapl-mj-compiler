@@ -48,8 +48,12 @@ public class CodeGenBinSM implements CodeGen {
                 backend.loadWord(attr.isGlobal() ? STATIC : STACK, attr.getOffset());
                 break;
 
+            case Attrib.ArrayElement:
+                backend.loadArrayElement();
+                break;
+
             default:
-                throw new IllegalStateException("Not implemented.");
+                throw new IllegalStateException("Loading "+ attr.getKind() +" not implemented.");
         }
 
         // fixme why was the kind changed? const (3) will be changed to 1 and not working anymore
@@ -59,6 +63,13 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public byte loadAddress(Attrib attr) throws YaplException {
+        if (attr.getKind() == Attrib.MemoryOperand) {
+            if (attr.getType().isArray()) {
+                loadValue(attr);
+                attr.setKind(Attrib.RegAddress);
+            }
+        }
+
         return 0;
     }
 
@@ -101,10 +112,15 @@ public class CodeGenBinSM implements CodeGen {
      */
     @Override
     public Attrib allocArray(ArrayType arrayType) throws YaplException {
+        if (arrayType.getDim() != 1)
+            throw new YaplException(Internal, -1, -1, "Multidim arrays not implemented yet");
         backend.storeArrayDim(arrayType.getDim()-1);
+
+        // requires the array length to be on top of the stack
         backend.allocArray();
 
-        return null; // address is located on exp stack
+        // address is located on exp stack
+        return new YaplAttrib(Attrib.RegAddress, arrayType);
     }
 
     @Override
@@ -117,9 +133,18 @@ public class CodeGenBinSM implements CodeGen {
 
     }
 
+    /**
+     * Allocate array at run time.
+     * Array length is the top element on the stack.
+     *
+     * @param arr  array type.
+     * @return           Attrib object representing a register operand
+     *                   holding the array base address.
+     * @throws YaplException
+     */
     @Override
     public void arrayOffset(Attrib arr, Attrib index) throws YaplException {
-
+        arr.setKind(Attrib.ArrayElement);
     }
 
     @Override
@@ -154,6 +179,10 @@ public class CodeGenBinSM implements CodeGen {
         switch (lvalue.getKind()) {
             case Attrib.MemoryOperand:
                 backend.storeWord(lvalue.isGlobal() ? STATIC : STACK, lvalue.getOffset());
+                break;
+
+            case Attrib.ArrayElement:
+                backend.storeArrayElement();
                 break;
 
             // TODO assignments for array elements, record fields
