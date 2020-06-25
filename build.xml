@@ -165,7 +165,7 @@
         <var name="npassed" value="0"/>
         <var name="ntotal" value="0"/>
         <var name="failed" value=""/>
-        <delete dir="testfiles/${version}" includes="*.PASSED *.FAILED *.log"/>
+        <delete dir="testfiles/${version}" includes="*.PASSED *.FAILED *.log *.mj *.execlog"/>
         <for param="yapl">
             <path>
                 <fileset dir="testfiles/${version}" includes="*.yapl"/>
@@ -214,6 +214,7 @@
         <var name="npassed" value="0"/>
         <var name="ntotal" value="0"/>
         <var name="failed" value=""/>
+        <delete dir="testfiles/codegen" includes="*.PASSED *.FAILED *.log *.mj *.execlog"/>
         <for param="testname" list="${test-files}">
             <sequential>
                 <trycatch>
