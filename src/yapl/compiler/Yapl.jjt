@@ -279,7 +279,11 @@ Attrib Literal() throws YaplException #void :
       | <FALSE> { x = new YaplAttrib(false); }
       | t=<number> { x = new YaplAttrib(Integer.parseInt(t.image)); }
     )
-    { codeGen.loadValue(x); return x; }
+    {
+         codeGen.loadValue(x);
+         System.out.println(x.getKind() + " " + x.getValue());
+         return x;
+    }
 }
 
 // used to access properties of records.
@@ -343,12 +347,15 @@ Attrib PrimaryExpr() throws YaplException :
 {Token t; Attrib x;}
 {
     (
-        x=Literal() | <L_BRACKET> x=Expr() <R_BRACKET> | LOOKAHEAD(2) x=ProcedureCall() {
+        x=Literal()
+        | <L_BRACKET> x=Expr() <R_BRACKET>
+        | LOOKAHEAD(2) x=ProcedureCall() {
             if (x.getType().isVoid()) {
                 t = ((SimpleNode) jjtree.peekNode()).jjtGetFirstToken();
                 throw new YaplException(ProcNotFuncExpr, t, t);
             }
-        } | t=<ident> {
+        }
+        | t=<ident> {
             String symbolName = t.image;
             symbolTable.checkCorrectDeclarationAsPrimaryExpression(symbolName, t.beginLine, t.beginColumn);
             x = new YaplAttrib(symbolTable.lookup(symbolName));
@@ -445,7 +452,8 @@ List<Attrib> ArgumentList() throws YaplException :
 Attrib ProcedureCall() throws YaplException :
 {Token tName, tBracket; List<Attrib> argList = new LinkedList<Attrib>();}
 {
-    tName=<ident> {
+    tName=<ident>
+    {
         String symbolName = tName.image;
         symbolTable.checkCorrectDeclarationAsProcedure(symbolName, tName.beginLine, tName.beginColumn);
 
@@ -456,8 +464,10 @@ Attrib ProcedureCall() throws YaplException :
 
         ProcedureType procType = (ProcedureType) type;
         Type returnType = procType.getReturnType();
-    } <L_BRACKET> [ argList=ArgumentList() ] tBracket=<R_BRACKET>
+    }
+    <L_BRACKET> [ argList=ArgumentList() ] tBracket=<R_BRACKET>
     {
+        // region check for incorrect parameters
         Iterator<Type> referenceArgList = procType.getParams().values().iterator();
         int i = 0;
         for (Attrib actual : argList) {
@@ -472,6 +482,7 @@ Attrib ProcedureCall() throws YaplException :
 
         if (referenceArgList.hasNext())
             throw new YaplException(TooFewArgs, tBracket, tName);
+        // endregion
 
         // new Attrib[0] is used to cast the array to the right datatype
         return codeGen.callProc(proc, argList.toArray(new Attrib[0]));
@@ -720,10 +731,13 @@ void Procedure() throws YaplException :
         ProcedureType procType = new ProcedureType(name.image, returnType);
         YaplSymbol proc = new YaplSymbol(name.image, SymbolKind.Procedure, procType);
         symbolTable.openScope(proc, name.beginLine, name.beginColumn);
-
+    }
+    <L_BRACKET> [ FormalParamList(procType) ] <R_BRACKET>
+    {
+        // gen enter proc label including nParams
         codeGen.enterProc(proc);
     }
-    <L_BRACKET> [ FormalParamList(procType) ] <R_BRACKET> Block() endName=<ident> <SEMICOLON>
+    Block() endName=<ident> <SEMICOLON>
     {
         symbolTable.closeScope(endName.image, false, endName.beginLine, endName.beginColumn);
 

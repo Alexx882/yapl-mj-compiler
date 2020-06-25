@@ -39,4 +39,8 @@ public class Type {
     public boolean isProcedure() {
         return this instanceof ProcedureType;
     }
+
+    public boolean isPrimitive() {
+        return isInt() || isBool() ;
+    }
 }
