@@ -36,6 +36,7 @@
     <property name="debug" value="false"/>
     <property name="simple-input" value="abc" description="Input for the simple scanner"/>
     <property name="runtimelib" value="${grammar-dir}/runtimelib.yapl"/>
+    <property name="exe" location="testfiles/codegen/test04.mj" description="Used for decode"/>
 
     <property name="execlog" value="${yapl-path}.execlog"/>
     <property name="truefile" value="${yapl-path}.true"/>
@@ -98,6 +99,7 @@
             <include name="yapl/interfaces/*.java"/>
             <include name="yapl/impl/*.java"/>
             <include name="yapl/lib/*.java"/>
+            <include name="MJ/*.java"/>
         </javac>
     </target>
 
@@ -240,6 +242,12 @@
         </for>
         <echo>Tests passed: ${npassed}/${ntotal}</echo>
 <!--        <echo>Failed: ${failed}</echo>-->
+    </target>
+
+    <target name="decode" depends="compile-java">
+        <java classname="MJ.Decode" classpath="${build}">
+            <arg value="${exe}"/>
+        </java>
     </target>
 
 </project>
