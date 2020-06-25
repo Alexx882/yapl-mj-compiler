@@ -352,8 +352,7 @@ Attrib PrimaryExpr() throws YaplException :
             String symbolName = t.image;
             symbolTable.checkCorrectDeclarationAsPrimaryExpression(symbolName, t.beginLine, t.beginColumn);
             x = new YaplAttrib(symbolTable.lookup(symbolName));
-            codeGen.loadValue(x);
-        } [ x=Selector(x) ]
+        } [ x=Selector(x) ] { codeGen.loadValue(x); }
         | x=ArrayLen()
     ) {return x;}
 }
@@ -616,15 +615,16 @@ void ConstDecl(boolean global) throws YaplException :
         s.setGlobal(global);
         s.setReadonly(true);
         symbolTable.addSymbol(s, t.beginLine, t.beginColumn);
+
+        // this sets the offset for s
+        codeGen.allocVariable(s);
     }
     <CONST_ASSIGN> x=Literal() <SEMICOLON>
     {
+        // type depends on literal
         s.setType(x.getType());
         codeGen.assign(new YaplAttrib(s), x);
-        // apply offset that was set in CodeGen to the symbol
-        s.setOffset(x.getOffset());
     }
-
 }
 
 // declares a constant in the current scope
@@ -638,12 +638,14 @@ void VarDecl(boolean global) throws YaplException :
         s = new YaplSymbol(t.image, SymbolKind.Variable, type);
         s.setGlobal(global);
         symbolTable.addSymbol(s, t.beginLine, t.beginColumn);
+        codeGen.allocVariable(s);
     }
     ( <COMMA> t=<ident>
         {
             s = new YaplSymbol(t.image, SymbolKind.Variable, type);
             s.setGlobal(global);
             symbolTable.addSymbol(s, t.beginLine, t.beginColumn);
+            codeGen.allocVariable(s);
         }
     )* <SEMICOLON>
 }

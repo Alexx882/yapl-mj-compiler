@@ -1,10 +1,7 @@
 package yapl.impl;
 
 import yapl.compiler.Token;
-import yapl.interfaces.Attrib;
-import yapl.interfaces.CodeGen;
-import yapl.interfaces.ExtendedBackendBinSM;
-import yapl.interfaces.Symbol;
+import yapl.interfaces.*;
 import yapl.lib.*;
 
 import java.util.ArrayList;
@@ -72,6 +69,7 @@ public class CodeGenBinSM implements CodeGen {
     @Override
     public void allocVariable(Symbol sym) throws YaplException {
         switch (sym.getKind()) {
+            case Symbol.Variable:
             case Symbol.Constant:
                 int offset;
                 if (sym.isGlobal()) {
@@ -130,29 +128,34 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void assign(Attrib lvalue, Attrib expr) throws YaplException {
+        switch (lvalue.getKind()){
+            case Attrib.MemoryOperand:
+                break;
+
+            case Attrib.ArrayElement:
+                break;
+        }
+
         if (!lvalue.getType().equals(expr.getType()))
             throw new IllegalStateException("Assignment type mismatch");
 
         if (lvalue.isGlobal() && lvalue.isConstant()) {
             var constDecl = new YaplAttrib(lvalue);
             constDecl.setValue(((YaplAttrib) expr).getValue());
-            constDecl.setOffset(backend.allocStaticData(1));
+            constDecl.setOffset(lvalue.getOffset());
 
             globalDeclarations.add(constDecl);
+
+            lvalue.setOffset(constDecl.getOffset());
             return;
         }
 
         switch (lvalue.getKind()) {
             case Attrib.MemoryOperand:
-                int offset;
-                if (lvalue.isGlobal()) {
-                    offset = backend.allocStaticData(1);
-                    backend.storeWord(STATIC, offset);
-                } else {
-                    offset = backend.allocStack(1);
-                    backend.storeWord(STACK, offset);
-                }
-                lvalue.setOffset(offset);
+                backend.storeWord(lvalue.isGlobal() ? STATIC : STACK, lvalue.getOffset());
+                break;
+
+            case Attrib.ArrayElement:
                 break;
         }
     }
