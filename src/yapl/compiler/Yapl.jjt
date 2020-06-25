@@ -400,19 +400,33 @@ Attrib CondAndExpr() throws YaplException :
     x=EqualExpr() ( op=<AND> y=EqualExpr() { x = codeGen.op2(x, op, y); } )* { return x; }
 }
 
+/**
+* Creation of a new array or record.
+*/
 Attrib CreationExpr() throws YaplException :
-{Token tNew, tArray; int dim = 0; Type type; Attrib size;}
+{
+    Token tNew, tArray;
+    int dim = 0;
+    Type type;
+    Attrib size;
+}
 {
     tNew=<NEW> type=NonArrayType() ( <L_SQ_BRACKET> size=Expr() tArray=<R_SQ_BRACKET> {
         if (!size.getType().isInt())
             throw new YaplException(BadArraySelector, tArray);
         dim++;
+        // load the array length on stack
+        codeGen.loadValue(size);
     } )*
     {
         if (dim == 0 && !type.isRecord())
             throw new YaplException(InvalidNewType, tNew);
-        if (dim != 0)
+        if (dim != 0){
+            // array
             type = new ArrayType(dim, type);
+            Attrib res = codeGen.allocArray((ArrayType)type);
+//            codeGen.arra
+        }
         return new YaplAttrib(Attrib.RegAddress, type);
     }
 }

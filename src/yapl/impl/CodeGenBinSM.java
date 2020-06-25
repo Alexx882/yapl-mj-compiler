@@ -93,9 +93,18 @@ public class CodeGenBinSM implements CodeGen {
 
     }
 
+    /**
+     * This implementation assumes that the array lengths (nr == arrayTime.dim) is already on the stack.
+     * @param arrayType  array type.
+     * @return
+     * @throws YaplException
+     */
     @Override
     public Attrib allocArray(ArrayType arrayType) throws YaplException {
-        return null;
+        backend.storeArrayDim(arrayType.getDim()-1);
+        backend.allocArray();
+
+        return null; // address is located on exp stack
     }
 
     @Override
