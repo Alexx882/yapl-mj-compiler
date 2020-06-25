@@ -52,7 +52,8 @@ public class CodeGenBinSM implements CodeGen {
                 throw new IllegalStateException("Not implemented.");
         }
 
-        attr.setKind(Attrib.RegValue);
+        // fixme why was the kind changed? const (3) will be changed to 1 and not working anymore
+//        attr.setKind(Attrib.RegValue);
         return 0; // return register number not needed for stack machine
     }
 
@@ -282,18 +283,15 @@ public class CodeGenBinSM implements CodeGen {
         int nParams = 0;
 
         if (!isMain) {
+            // load nParams
             Type type = proc.getType();
             if (!type.isProcedure())
                 throw new YaplException(Internal, -1, -1, "Procedure symbol type is not procedure.");
 
-            ProcedureType procType = (ProcedureType) type;
-
-            nParams = procType.getParams().size();
+            nParams = ((ProcedureType) type).getParams().size();
         }
 
-        // add hashcode to avoid errors with duplicate names (see /testfiles/symbolcheck/test13.yapl)
-        // use spaces as delimiter as they are not allowed in YAPL identifiers
-        String label = proc.getName() + " " + proc.hashCode();
+        String label = Procedure.getLabel(proc, false);
 
         backend.enterProc(label, nParams, isMain);
 
@@ -309,8 +307,7 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void exitProc(Symbol proc) throws YaplException {
-        // add ' end' to avoid overwriting the start label
-        backend.exitProc(proc.getName() + " " + proc.hashCode() + " end");
+        backend.exitProc(Procedure.getLabel(proc,true));
     }
 
     @Override
@@ -320,9 +317,32 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public Attrib callProc(Symbol proc, Attrib[] args) throws YaplException {
+        System.out.println(proc.getName() + ": " + args.length);
+
         for (PredefinedFunction predefFunc : PredefinedFunction.values())
             if (predefFunc.procedureType == proc.getType())
                 return callPredefinedFunction(predefFunc, args);
+
+        /*
+        * Info: currently all arguments for a procedure call are calculated immediately.
+        * eg. f(1+1, a or b) will immediately: const1, const1, add, <a or b ie const1/0),
+        * so the values are already on the stack.
+        * This is probably fine, but must not be forgotten.
+        */
+
+//        int cnt = 0;
+//        for (Attrib arg : args) {
+//            if (arg.getType().isPrimitive()) {
+//                System.out.println("\t" + arg.getType().isPrimitive() + " " + arg.getKind() + " " + ((YaplAttrib)arg).getValue());
+//                arg.setOffset(cnt++);
+//                this.loadValue(arg);
+//            } else {
+//                // complex type
+//                // todo
+//            }
+//        }
+
+        backend.callProc(Procedure.getLabel(proc, false));
 
         return new YaplAttrib(((ProcedureType) proc.getType()).getReturnType());
     }

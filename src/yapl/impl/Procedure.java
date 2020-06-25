@@ -1,5 +1,7 @@
 package yapl.impl;
 
+import yapl.interfaces.Symbol;
+
 import java.util.LinkedList;
 import java.util.List;
 
@@ -48,5 +50,18 @@ public class Procedure {
         localVariableSizes.add(nWords);
 
         return address;
+    }
+
+    /**
+     * Create a label for the procedure symbol.
+     * <br />
+     * Add hashcode to avoid errors with duplicate names (see /testfiles/symbolcheck/test13.yapl).
+     * Use spaces as delimiter as they are not allowed in YAPL identifiers.
+     * @param end
+     */
+    public static String getLabel(Symbol proc, boolean end){
+        return proc.getName() + " " + proc.hashCode()
+                // add ' end' to avoid overwriting the start label
+                + (end ? "end" : "");
     }
 }

@@ -21,8 +21,15 @@ public class ProcedureType extends Type {
         parameters = new LinkedHashMap<>();
     }
 
-    public void addParam(String name, Type type) {
+    /**
+     * Adds a new parameter to the procedure and returns its position in the parameter list.
+     * @param name
+     * @param type
+     * @return
+     */
+    public int addParam(String name, Type type) {
         parameters.put(name, type);
+        return parameters.size()-1;
     }
 
     public LinkedHashMap<String, Type> getParams() {
