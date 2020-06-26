@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="CompileRuntime" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="yapl.compiler.Yapl" />
+    <module name="yapl-mj-compiler" />
+    <option name="PROGRAM_PARAMETERS" value="$Projectpath$/yapl/compiler/runtimelib_wrapper.yapl -o $Projectpath$/yapl/compiler/runtimelib.mj" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

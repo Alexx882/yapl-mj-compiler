@@ -1,0 +1,21 @@
+Program runtimelib
+
+Procedure int _allocArray(int[] len, int dim, int nDims)
+Declare
+    int[] a;
+    int i;
+Begin
+    a := new int[len[dim]];
+    dim := dim + 1;
+    If dim < nDims Then
+        i := 0;
+        While i < #a Do
+            a[i] := _allocArray(len, dim, nDims);
+            i := i + 1;
+        EndWhile;
+    EndIf;
+    Return a;        /* return base address of a, suppress type checking! */
+End _allocArray;
+
+Begin
+End runtimelib.
