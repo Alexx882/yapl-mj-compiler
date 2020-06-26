@@ -6,7 +6,7 @@ public enum ErrorType {
 
     /* --- Error Numbers --- */
 
-    Internal(CompilerError.Internal, "Internal error."),
+    Internal(CompilerError.Internal, "Internal error: %s"),
     Lexical(CompilerError.Lexical, "Lexical error."),
     Syntax(CompilerError.Syntax, "Syntax error."),
 

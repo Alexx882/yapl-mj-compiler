@@ -1,49 +1,46 @@
 package yapl.lib;
 
 import yapl.impl.ErrorType;
+import yapl.interfaces.Symbol;
 
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Objects;
+import java.util.*;
 
 public class RecordType extends Type {
 
     public final String name;
-
-    // LinkedHashMap is insertion ordered and will retain the order in which elements were inserted
-    private final LinkedHashMap<String, Type> fields;
+    private final ArrayList<Symbol> fields;
+    private final HashMap<String, Integer> fieldLookup;
 
     public RecordType(String name) {
         this.name = name;
 
-        fields = new LinkedHashMap<>();
+        fields = new ArrayList<>();
+        fieldLookup = new HashMap<>();
     }
 
-    public void addField(String name, Type type) {
-        fields.put(name, type);
+    public void addField(Symbol s) {
+        fieldLookup.put(s.getName(), fields.size());
+        fields.add(s);
+    }
+
+    public Symbol getField(int i) {
+        return fields.get(i);
+    }
+
+    public Symbol getField(String name) {
+        return fields.get(getFieldOffset(name));
     }
 
     public Type getFieldType(String name) {
-        return fields.get(name);
+        return getField(name).getType();
     }
 
-    public Type getFieldType(int index) throws YaplException {
-        if (index >= fields.size())
-            throw new YaplException(ErrorType.Internal, -1, -1,
-                    "record field index out of bounds for type " + name
-            );
-
-        Iterator<Type> fieldTypes = fields.values().iterator();
-
-        for (int i = 0; i < index; i++) {
-            fieldTypes.next();
-        }
-
-        return fieldTypes.next();
+    public Type getFieldType(int index) {
+        return getField(index).getType();
     }
 
     public boolean hasField(String name) {
-        return fields.containsKey(name);
+        return fieldLookup.containsKey(name);
     }
 
     @Override
@@ -53,29 +50,41 @@ public class RecordType extends Type {
 
         RecordType that = (RecordType) o;
 
-        var thisIter = fields.entrySet().iterator();
-        var thatIter = that.fields.entrySet().iterator();
+        if (fields.size() != that.fields.size()) return false;
 
-        while (thisIter.hasNext()) {
-            if (!thatIter.hasNext())
-                return false;
-
-            var thisNext = thisIter.next();
-            var thatNext = thatIter.next();
-
-            // check for recursive fields (if both fields are recursive they are considered equal)
-            if (this == thisNext.getValue() && that == thatNext.getValue())
+        for (int i = 0; i < fields.size(); i++) {
+            // check if both fields are self reference to prevent falling into infinite loop
+            if (isSelfReference(i) && that.isSelfReference(i))
                 continue;
 
-            if (!Objects.equals(thisNext, thatNext))
+            var thisField = getField(i);
+            var thatField = that.getField(i);
+
+            // compare field names
+            if (!Objects.equals(thisField.getName(), thatField.getName()))
+                return false;
+            // compare field types
+            if (!Objects.equals(thisField.getType(), thatField.getType()))
                 return false;
         }
 
-        return !thatIter.hasNext();
+        return true;
+    }
+
+    private boolean isSelfReference(int i) {
+        return this == getFieldType(i);
     }
 
     @Override
     public int hashCode() {
         return fields.hashCode();
+    }
+
+    public int nFields() {
+        return fields.size();
+    }
+
+    public int getFieldOffset(String name) {
+        return fieldLookup.get(name);
     }
 }

@@ -52,24 +52,21 @@ public class CodeGenBinSM implements CodeGen {
                 backend.loadArrayElement();
                 break;
 
+            case Attrib.RecordField:
+                backend.loadWord(HEAP, attr.getOffset());
+                break;
+
             default:
-                throw new IllegalStateException("Loading "+ attr.getKind() +" not implemented.");
+                throw new IllegalStateException("Loading " + attr.getKind() + " not implemented.");
         }
 
-        // fixme why was the kind changed? const (3) will be changed to 1 and not working anymore
-//        attr.setKind(Attrib.RegValue);
+        attr.setKind(Attrib.RegValue);
         return 0; // return register number not needed for stack machine
     }
 
     @Override
     public byte loadAddress(Attrib attr) throws YaplException {
-        if (attr.getKind() == Attrib.MemoryOperand) {
-            if (attr.getType().isArray()) {
-                loadValue(attr);
-                attr.setKind(Attrib.RegAddress);
-            }
-        }
-
+        // as of now, this would have no difference in runtime effect to loadValue()
         return 0;
     }
 
@@ -96,7 +93,8 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void setFieldOffsets(RecordType record) {
-
+        for (int i = 0; i < record.nFields(); i++)
+            record.getField(i).setOffset(i);
     }
 
     @Override
@@ -106,15 +104,16 @@ public class CodeGenBinSM implements CodeGen {
 
     /**
      * This implementation assumes that the array lengths (nr == arrayTime.dim) is already on the stack.
-     * @param arrayType  array type.
+     *
+     * @param arrayType array type.
      * @return
      * @throws YaplException
      */
     @Override
     public Attrib allocArray(ArrayType arrayType) throws YaplException {
         if (arrayType.getDim() != 1)
-            throw new YaplException(Internal, -1, -1, "Multidim arrays not implemented yet");
-        backend.storeArrayDim(arrayType.getDim()-1);
+            throw new YaplException(Internal, -1, -1, "Multidim array allocation not implemented yet");
+        backend.storeArrayDim(arrayType.getDim() - 1);
 
         // requires the array length to be on top of the stack
         backend.allocArray();
@@ -125,7 +124,8 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public Attrib allocRecord(RecordType recordType) throws YaplException {
-        return null;
+        backend.allocHeap(recordType.nFields());
+        return new YaplAttrib(Attrib.RegAddress, recordType);
     }
 
     @Override
@@ -149,13 +149,18 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void recordOffset(Attrib record, Symbol field) throws YaplException {
+        if (!record.getType().isRecord())
+            throw new YaplException(Internal, -1, -1, "Cannot calculate record offset for non-record type");
 
+        record.setKind(Attrib.RecordField);
+        record.setType(field.getType());
+        record.setOffset(field.getOffset());
     }
 
     @Override
     public Attrib arrayLength(Attrib arr) throws YaplException {
         if (arr.getKind() != Attrib.RegAddress)
-            loadAddress(arr);
+            loadValue(arr);
 
         backend.arrayLength();
         return new YaplAttrib(Attrib.RegValue, Type.INT);
@@ -171,8 +176,9 @@ public class CodeGenBinSM implements CodeGen {
         // special treatment for global constants, since they need code to assign values,
         // but code is only executed after the startPC
         // solution: move value assignment to start of main procedure
+        // also, there can be no global constants after the startPC
         if (lvalue.isGlobal() && lvalue.isConstant()) {
-            globalConstantAssignments.put(lvalue,((YaplAttrib) expr).getValue());
+            globalConstantAssignments.put(lvalue, ((YaplAttrib) expr).getValue());
             return;
         }
 
@@ -185,10 +191,14 @@ public class CodeGenBinSM implements CodeGen {
                 backend.storeArrayElement();
                 break;
 
+            case Attrib.RecordField:
+                backend.storeWord(HEAP, lvalue.getOffset());
+                break;
+
             // TODO assignments for array elements, record fields
 
             default:
-                throw new YaplException(Internal, -1, -1, "Not implemented yet");
+                throw new YaplException(Internal, -1, -1, "Assignment for kind " + lvalue.getKind() + " implemented yet");
         }
     }
 
@@ -345,7 +355,7 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void exitProc(Symbol proc) throws YaplException {
-        backend.exitProc(Procedure.getLabel(proc,true));
+        backend.exitProc(Procedure.getLabel(proc, true));
     }
 
     @Override
@@ -355,7 +365,7 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public Attrib callProc(Symbol proc, Attrib[] args) throws YaplException {
-        System.out.println(proc.getName() + ": " + args.length);
+//        System.out.println(proc.getName() + ": " + args.length);
 
         for (PredefinedFunction predefFunc : PredefinedFunction.values())
             if (predefFunc.procedureType == proc.getType())
