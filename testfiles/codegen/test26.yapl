@@ -1,0 +1,47 @@
+/* CodeGen test input - records and arrays and multiple selectors.
+ */
+Program test23
+Declare
+    Record Stat
+        int count;
+        int median;
+        Stat stat;
+    EndRecord;
+
+Procedure Stat createStat(int median)
+Declare
+    Stat s;
+Begin
+    s := new Stat;
+    s.count := 1;
+    s.median := median;
+    Return s;
+End createStat;
+
+Procedure void printStat(Stat statistics)
+Begin
+    Write "count = ";
+    writeint(statistics.count);
+    writeln();
+    Write "median = ";
+    writeint(statistics.median);
+    writeln();
+End printStat;
+
+Declare 
+    Stat stat;
+    Stat[] stats;
+Begin
+    Write "--- Start test23 ---";
+    writeln();
+    stat := createStat(-1);
+    printStat(stat);
+    Write "--- End test23 ---";
+    writeln();
+
+    stats := new Stat[20];
+    stats[1] := stat;
+    stats[1].count := stats[1].count + 1;
+    stats[1].stat := stats[1];
+    printStat(stats[1].stat.stat.stat.stat);
+End test23.

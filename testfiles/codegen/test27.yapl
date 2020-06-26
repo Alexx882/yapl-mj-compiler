@@ -1,0 +1,52 @@
+/* CodeGen test input - records and arrays and multiple selectors II - electric boogaloo.
+ */
+Program test24
+Declare
+    Record List
+        int item;
+        List next;
+        List[] prev;
+    EndRecord;
+
+Procedure void printList(List list)
+Declare
+    List node;
+Begin
+    node := list;
+    While node.item >= 0 Do
+        writeint(node.item);
+        writeln();
+        node := node.next;
+    EndWhile;
+End printList;
+
+Declare
+    List head, previous, current;
+    Const N = 10;
+    int i;
+Begin
+    Write "--- Start test24 ---";
+    writeln();
+    head := new List;
+    head.item := 1;
+    previous := head;
+    i := 2;
+    While i <= N+1 Do
+        current := new List;
+        current.item := i*i;
+        previous.next := current;
+        previous := current;
+        i := i+1;
+	EndWhile;
+	current.item := -1;
+    printList(head);
+    Write "--- End test24 ---";
+    writeln();
+
+    head.next.next.next.prev := new List[3];
+    head.next.next.next.prev[0] := head.next.next;
+    head.next.next.next.prev[1] := head.next;
+    head.next.next.next.prev[2] := head;
+
+    writeint(head.next.next.next.prev[1].next.next.item);
+End test24.
