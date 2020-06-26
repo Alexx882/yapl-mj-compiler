@@ -31,7 +31,7 @@ import yapl.lib.*;
 import static yapl.impl.ErrorType.*;
 
 import java.io.*;
-import java.util.Iterator;
+import java.nio.file.Files;import java.nio.file.Path;import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
@@ -52,7 +52,7 @@ public class Yapl {
 
     private static ExtendedBackendBinSM backend = new BackendMJ();
 
-    private static CodeGen codeGen;
+    private static CodeGenBinSM codeGen;
 
     public static void main(String[] args) throws FileNotFoundException {
         // parse per default
@@ -74,6 +74,13 @@ public class Yapl {
 
         // if no srcPath is provided, read from STDIN
         InputStream input = srcPath != null ? new FileInputStream(srcPath) : System.in;
+
+        try {
+            String arrayLib = Files.readString(Path.of("./src/yapl/compiler/runtimelib.yapl"));
+        }
+        catch(IOException e) {
+            System.out.println("Runtimelib not found.");
+        }
 
         codeGen = new CodeGenBinSM(backend);
 
@@ -407,10 +414,19 @@ Attrib CreationExpr() throws YaplException :
     Attrib size;
 }
 {
-    tNew=<NEW> type=NonArrayType() ( <L_SQ_BRACKET> size=Expr() tArray=<R_SQ_BRACKET> {
+    tNew=<NEW> type=NonArrayType() ( <L_SQ_BRACKET>
+        {
+            // 1. create array to store the dimensions
+            codeGen.prepareForAnotherArrayDimension();
+        }
+        size=Expr() tArray=<R_SQ_BRACKET> {
         if (!size.getType().isInt())
             throw new YaplException(BadArraySelector, tArray);
+
         dim++;
+
+        // 2. store the dim in the ith dimension-array column
+        codeGen.storeArrayDim(dim, size);
     } )*
     {
         if (dim != 0) {
@@ -421,7 +437,6 @@ Attrib CreationExpr() throws YaplException :
         } else if (type.isRecord()) {
             // is record
             return codeGen.allocRecord((RecordType)type);
-
         } else {
             throw new YaplException(InvalidNewType, tNew);
         }
@@ -511,7 +526,11 @@ void Assignment() throws YaplException :
         String symbolName = t.image;
         symbolTable.checkCorrectDeclarationAsLValue(symbolName, t.beginLine, t.beginColumn);
         lvalue = new YaplAttrib(symbolTable.lookup(symbolName));
-    } [ lvalue=Selector(lvalue) ] t=<ASSIGN> expr=Expr()
+    }
+    [
+     lvalue=Selector(lvalue)
+    ]
+        t=<ASSIGN> expr=Expr()
     {
         if (!lvalue.getType().equals(expr.getType()))
             throw new YaplException(TypeMismatchAssign, t);

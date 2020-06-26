@@ -97,15 +97,39 @@ public class CodeGenBinSM implements CodeGen {
             record.getField(i).setOffset(i);
     }
 
+    private final int maxArrayDim = 2;
+    private final String arrayAddressSymbol = "_array_dim_buffer";
+
+    private YaplSymbol arrayDimensionArrayAddress = null;
+    private int currentDim = 0;
+
+    public void prepareForAnotherArrayDimension() throws YaplException {
+        if(arrayDimensionArrayAddress == null) {
+            arrayDimensionArrayAddress = new YaplSymbol(arrayAddressSymbol, SymbolKind.Variable);
+            this.allocVariable(arrayDimensionArrayAddress);
+
+            backend.loadConst(maxArrayDim);
+            backend.allocArray();
+
+            backend.storeWord(STACK, arrayDimensionArrayAddress.getOffset());
+        }
+
+        System.out.println(String.format("PREPARE FOR THE DIM %d", currentDim));
+
+        backend.loadWord(STACK, arrayDimensionArrayAddress.getOffset());
+        backend.loadConst(currentDim++);
+    }
+
     @Override
     public void storeArrayDim(int dim, Attrib length) throws YaplException {
-
+        System.out.println("STORE THE DIM!");
+        backend.storeArrayElement();
     }
 
     /**
      * This implementation assumes that the array lengths (nr == arrayTime.dim) is already on the stack.
      *
-     * @param arrayType array type.
+     * @param arrayType array type. arrayType.dim e [1;n]
      * @return
      * @throws YaplException
      */
@@ -113,10 +137,19 @@ public class CodeGenBinSM implements CodeGen {
     public Attrib allocArray(ArrayType arrayType) throws YaplException {
         if (arrayType.getDim() != 1)
             throw new YaplException(Internal, -1, -1, "Multidim array allocation not implemented yet");
-        backend.storeArrayDim(arrayType.getDim() - 1);
+
+        // load latest array element
+        backend.loadWord(STACK, arrayDimensionArrayAddress.getOffset());
+        backend.loadConst(currentDim-1);
+        backend.loadArrayElement();
 
         // requires the array length to be on top of the stack
         backend.allocArray();
+
+        // reset array allocation
+        System.out.println("RESET THE DIM!");
+        arrayDimensionArrayAddress = null;
+        currentDim = 0;
 
         // address is located on exp stack
         return new YaplAttrib(Attrib.RegAddress, arrayType);
