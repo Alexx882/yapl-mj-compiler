@@ -584,7 +584,7 @@ void ReturnStatement() throws YaplException :
 void WriteStatement() throws YaplException :
 {Token s;}
 {
-    <WRITE> s=<string> { codeGen.writeString(s.image.substring(1, s.image.length() - 1)); } // strip quotes
+    <WRITE> s=<string> { codeGen.writeString(s.image); }
 }
 
 void Statement() throws YaplException #void :

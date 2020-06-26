@@ -21,6 +21,8 @@ public class CodeGenBinSM implements CodeGen {
 
     private final Map<Attrib, Integer> globalConstantAssignments = new HashMap<>();
 
+    private int newlineOffset = -1;
+
     public CodeGenBinSM(ExtendedBackendBinSM backend) {
         this.backend = backend;
     }
@@ -81,11 +83,14 @@ public class CodeGenBinSM implements CodeGen {
             case Symbol.Variable:
             case Symbol.Constant:
                 int offset;
-                if (sym.isGlobal()) {
+
+                if (sym.isGlobal())
+                    // global variables and constants are stored in STATIC
                     offset = backend.allocStaticData(1);
-                } else {
+                else
+                    // local variables and constants are stored on the STACK
                     offset = backend.allocStack(1);
-                }
+
                 sym.setOffset(offset);
                 break;
         }
@@ -130,20 +135,12 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void setParamOffset(Symbol sym, int pos) {
-
+        // handled differently
     }
 
-    /**
-     * Allocate array at run time.
-     * Array length is the top element on the stack.
-     *
-     * @param arr array type.
-     * @return Attrib object representing a register operand
-     * holding the array base address.
-     * @throws YaplException
-     */
     @Override
     public void arrayOffset(Attrib arr, Attrib index) throws YaplException {
+        // no code since the array load and store ops consume address AND index
         arr.setKind(Attrib.ArrayElement);
     }
 
@@ -168,8 +165,6 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void assign(Attrib lvalue, Attrib expr) throws YaplException {
-        // TODO make sure that lvalue address is on stack if lvalue is array or record
-
         if (!lvalue.getType().equals(expr.getType()))
             throw new IllegalStateException("Assignment type mismatch");
 
@@ -222,7 +217,7 @@ public class CodeGenBinSM implements CodeGen {
                 throw new YaplException(Internal, -1, -1, "Illegal Op1 operation.");
         }
 
-        return new YaplAttrib(Attrib.RegValue, Type.INT);
+        return x;
     }
 
     @Override
@@ -270,7 +265,7 @@ public class CodeGenBinSM implements CodeGen {
         if (intOp && !x.getType().isInt() || !intOp && !x.getType().isBool())
             throw new YaplException(IllegalOp2Type, op, op);
 
-        return new YaplAttrib(Attrib.RegValue, x.getType());
+        return x;
     }
 
     @Override
@@ -299,7 +294,8 @@ public class CodeGenBinSM implements CodeGen {
                 throw new YaplException(Internal, -1, -1, "Illegal RelOp operation.");
         }
 
-        return new YaplAttrib(Attrib.RegValue, Type.BOOL);
+        x.setType(Type.BOOL);
+        return x;
     }
 
     @Override
@@ -322,13 +318,15 @@ public class CodeGenBinSM implements CodeGen {
                 throw new YaplException(Internal, -1, -1, "Illegal EqualOp operation.");
         }
 
-        return new YaplAttrib(Attrib.RegValue, Type.BOOL);
+        x.setType(Type.BOOL);
+        return x;
     }
 
     @Override
     public void enterProc(Symbol proc) throws YaplException {
-        boolean isMain = proc.getKind() == Symbol.Program;
+        boolean isMain = proc == null || proc.getKind() == Symbol.Program;
         int nParams = 0;
+        String label;
 
         if (!isMain) {
             // load nParams
@@ -337,9 +335,11 @@ public class CodeGenBinSM implements CodeGen {
                 throw new YaplException(Internal, -1, -1, "Procedure symbol type is not procedure.");
 
             nParams = ((ProcedureType) type).getParams().size();
-        }
+            label = Procedure.getLabel(proc, false);
 
-        String label = Procedure.getLabel(proc, false);
+        } else {
+            label = newLabel();
+        }
 
         backend.enterProc(label, nParams, isMain);
 
@@ -401,17 +401,17 @@ public class CodeGenBinSM implements CodeGen {
                 // if
                 branchIfFalse(args[0], elseLabel);
                 // then
-                writeString("True");
+                writeStringNoQuotes("True");
                 jump(endIfLabel);
                 // else
                 assignLabel(elseLabel);
-                writeString("False");
+                writeStringNoQuotes("False");
                 // endif
                 assignLabel(endIfLabel);
                 break;
 
             case writeln:
-                writeString(System.lineSeparator());
+                writeStringNoQuotes(System.lineSeparator());
                 break;
 
             case readint:
@@ -431,6 +431,11 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void writeString(String string) throws YaplException {
+        // strip quotes
+        writeStringNoQuotes(string.substring(1, string.length() - 1));
+    }
+
+    private void writeStringNoQuotes(String string) {
         int addr = backend.allocStringConstant(string);
         backend.writeString(addr);
     }
