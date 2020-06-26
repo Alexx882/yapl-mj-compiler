@@ -399,6 +399,25 @@ public class BackendMJ implements ExtendedBackendBinSM {
         addExplicitOperandToCodeBuffer(addr, OperandType.s16);
     }
 
+    /**
+     * Read integer from standard input stream onto expression stack.
+     * <p>
+     * Note: consumes "[^-0-9]*(-?\d+)[\n]*" (the first integer encountered and everything before)
+     *       and converts the part in parentheses into an integer.
+     * Note: in some consoles, this will not consume the newline character(s),
+     *       leading to unexpected behavoir when calling repeatedly.
+     */
+    public void readInteger() {
+        addInstructionToCodeBuffer(read);
+    }
+
+    /**
+     * Read a byte value (single character) from standard input stream.
+     */
+    public void readByte() {
+        addInstructionToCodeBuffer(bread);
+    }
+
     @Override
     public void neg() {
         addInstructionToCodeBuffer(neg);

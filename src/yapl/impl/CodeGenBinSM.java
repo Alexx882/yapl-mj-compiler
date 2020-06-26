@@ -360,8 +360,13 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void returnFromProc(Symbol proc, Attrib returnVal) throws YaplException {
-        // return value will be pushed on stack immediately after encountered in grammar
-        backend.jump(Procedure.getLabel(proc, true));
+        // if this is the main procedure, just exit
+        if (proc == null)
+            backend.exitProc(newLabel());
+
+        else
+            // return value will be pushed on stack immediately after encountered in grammar
+            backend.jump(Procedure.getLabel(proc, true));
     }
 
     @Override
@@ -385,8 +390,6 @@ public class CodeGenBinSM implements CodeGen {
     }
 
     public Attrib callPredefinedFunction(PredefinedFunction f, Attrib[] args) throws YaplException {
-        Type returnType = Type.VOID;
-
         switch (f) {
             case writeint:
                 backend.writeInteger();
@@ -412,16 +415,18 @@ public class CodeGenBinSM implements CodeGen {
                 break;
 
             case readint:
-//                backend.readInteger();
-//                returnType = Type.INT;
-//                break;
-                throw new IllegalStateException("readint() is not implemented");
+                // option 1: mock behavior for testing purposes
+                backend.loadConst(0);
+
+                // option 2: real implementation
+//                ((BackendMJ) backend).readInteger();
+                break;
 
             default:
                 throw new IllegalStateException("Predefined function not implemented.");
         }
 
-        return new YaplAttrib(returnType);
+        return new YaplAttrib(f.procedureType.getReturnType());
     }
 
     @Override
