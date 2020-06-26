@@ -137,9 +137,9 @@ public class CodeGenBinSM implements CodeGen {
      * Allocate array at run time.
      * Array length is the top element on the stack.
      *
-     * @param arr  array type.
-     * @return           Attrib object representing a register operand
-     *                   holding the array base address.
+     * @param arr array type.
+     * @return Attrib object representing a register operand
+     * holding the array base address.
      * @throws YaplException
      */
     @Override
@@ -360,7 +360,8 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void returnFromProc(Symbol proc, Attrib returnVal) throws YaplException {
-
+        // return value will be pushed on stack immediately after encountered in grammar
+        backend.jump(Procedure.getLabel(proc, true));
     }
 
     @Override
@@ -372,23 +373,11 @@ public class CodeGenBinSM implements CodeGen {
                 return callPredefinedFunction(predefFunc, args);
 
         /*
-        * Info: currently all arguments for a procedure call are calculated immediately.
-        * eg. f(1+1, a or b) will immediately: const1, const1, add, <a or b ie const1/0),
-        * so the values are already on the stack.
-        * This is probably fine, but must not be forgotten.
-        */
-
-//        int cnt = 0;
-//        for (Attrib arg : args) {
-//            if (arg.getType().isPrimitive()) {
-//                System.out.println("\t" + arg.getType().isPrimitive() + " " + arg.getKind() + " " + ((YaplAttrib)arg).getValue());
-//                arg.setOffset(cnt++);
-//                this.loadValue(arg);
-//            } else {
-//                // complex type
-//                // todo
-//            }
-//        }
+         * Info: currently all arguments for a procedure call are calculated immediately.
+         * eg. f(1+1, a or b) will immediately: const1, const1, add, <a or b ie const1/0),
+         * so the values are already on the stack.
+         * This is probably fine, but must not be forgotten.
+         */
 
         backend.callProc(Procedure.getLabel(proc, false));
 
