@@ -1,0 +1,25 @@
+/* CodeGen test input - 1-dimensional array expressions and assignments.
+ */
+Program test07
+Declare
+    Const len = 2;
+    int[][] a;
+Begin
+    Write "--- Start test07n ---";
+    writeln();
+    a := new int[len][1];
+    a[0][0] := 0;
+    a[1][0] := 7;
+
+    Write "a[0] = ";
+    writeint(a[0][0]);
+    Write " (0 expected)";
+    writeln();
+    Write "a[1] = ";
+    writeint(a[1][0]);
+    Write " (7 expected)";
+    writeln();
+
+	Write "--- End test07n ---";
+    writeln();
+End test07.
