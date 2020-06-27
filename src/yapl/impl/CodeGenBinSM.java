@@ -487,13 +487,10 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void returnFromProc(Symbol proc, Attrib returnVal) throws YaplException {
-        // if this is the main procedure, just exit
-        if (proc == null)
-            backend.exitProc(newLabel());
+        // if this is called for the main PROCEDURE, nothing changes.
 
-        else
-            // return value will be pushed on stack immediately after encountered in grammar
-            backend.jump(Procedure.getLabel(proc, true));
+        // return value will be pushed on stack immediately after encountered in grammar
+        backend.jump(Procedure.getLabel(proc, true));
     }
 
     @Override
@@ -542,6 +539,7 @@ public class CodeGenBinSM implements CodeGen {
                 break;
 
             case readint:
+                // TODO check: shouldnt we use real impl eventually
                 // option 1: mock behavior for testing purposes
                 backend.loadConst(0);
 

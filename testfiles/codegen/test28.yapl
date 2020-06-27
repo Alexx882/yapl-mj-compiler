@@ -1,0 +1,30 @@
+/* CodeGen test input - Return statements in main.
+ */
+Program test07
+Declare
+    Const len = 2;
+    int[] a;
+Begin
+    Write "--- Start test28 ---";
+    writeln();
+    a := new int[len];
+    a[0] := 0;
+    a[1] := 7;
+
+    Write "a[0] = ";
+    writeint(a[0]);
+    Write " (0 expected)";
+    writeln();
+
+    If 1 > 0 Then
+        Return;
+    EndIf;
+
+    Write "a[1] = ";
+    writeint(a[1]);
+    Write " (7 expected)";
+    writeln();
+
+	Write "--- End test28 ---";
+    writeln();
+End test07.

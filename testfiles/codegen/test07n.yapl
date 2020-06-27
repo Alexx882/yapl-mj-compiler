@@ -1,4 +1,4 @@
-/* CodeGen test input - 1-dimensional array expressions and assignments.
+/* CodeGen test input - 2-dimensional array expressions and assignments.
  */
 Program test07
 Declare

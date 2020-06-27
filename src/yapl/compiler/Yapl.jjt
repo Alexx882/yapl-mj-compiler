@@ -212,8 +212,10 @@ void Program() throws YaplException :
         YaplSymbol symbol = new YaplSymbol(progName, SymbolKind.Program);
         symbolTable.setParentSymbol(symbol);
 
-    } ( Decl(true) | Procedure() )*
-    <BEGIN> { codeGen.enterProc(symbol); } StatementList()
+    }
+    ( Decl(true) | Procedure() )*
+    <BEGIN> { codeGen.enterProc(symbol); }
+    StatementList()
     <END> endName=<ident> <DOT> {
 
         symbolTable.closeScope(endName.image, true, endName.beginLine, endName.beginColumn);
@@ -588,6 +590,8 @@ void ReturnStatement() throws YaplException :
             procName = procType.name;
             errorType = refType.isVoid() ? IllegalRetValProc : InvalidReturnType;
         } else {
+            // main is just a special procedure
+            proc = symbolTable.getNearestParentSymbol(YaplSymbol.Program);
             refType = Type.VOID;
             errorType = IllegalRetValMain;
         }
