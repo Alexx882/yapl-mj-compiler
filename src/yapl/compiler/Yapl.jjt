@@ -597,7 +597,9 @@ void ReturnStatement() throws YaplException :
         }
 
         Type actualType = x == null ? Type.VOID : x.getType();
-        if (!refType.equals(actualType) && !procName.equals("_allocArray"))
+        if (!refType.equals(actualType)
+            // _allocArray returns wrong type per design
+            && !(procName != null && procName.equals("_allocArray")))
             throw new YaplException(errorType, t, procName);
 
         codeGen.returnFromProc(proc, x);
