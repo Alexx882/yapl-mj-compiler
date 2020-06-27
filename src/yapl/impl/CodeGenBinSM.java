@@ -102,29 +102,156 @@ public class CodeGenBinSM implements CodeGen {
             record.getField(i).setOffset(i);
     }
 
+    private final String suffixToAvoidVariableCollisions = "____________________FUCKYOUTASCHWER_________________";
+
+    private final int maxArrayDim = 2;
+    private final String arrayAddressSymbol = "_array_dim_buffer" + suffixToAvoidVariableCollisions;
+    private final String resultArrayAddressSymbol = "_array_add_result" + suffixToAvoidVariableCollisions;
+    private final String arrayDimIteratorSymbol = "_array_dim_iterator" + suffixToAvoidVariableCollisions;
+
+    private YaplSymbol arrayDimensionArrayAddress = null;
+    private int currentDim = 0;
+    private int currentArray = 0;
+
+    public void prepareForAnotherArrayDimension() throws YaplException {
+        if (arrayDimensionArrayAddress == null) {
+            // if there is no array allocated at the moment, start a new dim-tracking array
+            arrayDimensionArrayAddress = new YaplSymbol(arrayAddressSymbol, SymbolKind.Variable);
+            this.allocVariable(arrayDimensionArrayAddress);
+
+            backend.loadConst(maxArrayDim);
+            backend.allocArray();
+
+            backend.storeWord(STACK, arrayDimensionArrayAddress.getOffset());
+        }
+
+        backend.loadWord(STACK, arrayDimensionArrayAddress.getOffset());
+        backend.loadConst(currentDim++);
+    }
+
     @Override
     public void storeArrayDim(int dim, Attrib length) throws YaplException {
+        backend.storeArrayElement();
+    }
 
+    public static void main(String[] args) {
+        int[][][] arr = new int[2][3][4];
+
+        for (int i = 0; i < 2; i++) {
+
+            int[][] arr1 = new int[3][4];
+
+
+            for (int j = 0; j < 3; j++) {
+                int[] arr2 = new int[4];
+
+                arr1[j] = arr2;
+            }
+
+            arr[i] = arr1;
+        }
     }
 
     /**
      * This implementation assumes that the array lengths (nr == arrayTime.dim) is already on the stack.
      *
-     * @param arrayType array type.
+     * @param arrayType array type. arrayType.dim e [1;n]
      * @return
      * @throws YaplException
      */
     @Override
     public Attrib allocArray(ArrayType arrayType) throws YaplException {
-        if (arrayType.getDim() != 1)
-            throw new YaplException(Internal, -1, -1, "Multidim array allocation not implemented yet");
-        backend.storeArrayDim(arrayType.getDim() - 1);
 
-        // requires the array length to be on top of the stack
+        // int[..] result
+        YaplSymbol resultAddresses = new YaplSymbol(resultArrayAddressSymbol, SymbolKind.Variable);
+        this.allocVariable(resultAddresses);
+
+        //////
+        // result = new int[|dim|]
+        //////
+        backend.loadConst(currentDim);
         backend.allocArray();
+        backend.storeWord(STACK, resultAddresses.getOffset());
+
+        //////
+        // result[0] = a1
+        //////
+        backend.loadWord(STACK, resultAddresses.getOffset());
+        backend.loadConst(0);
+        // load(dim0)
+        loadArrayValueAtIndex(arrayDimensionArrayAddress, 0);
+        // int[dim0] a1 = new int[dim0]
+        backend.allocArray();
+        //
+        backend.storeArrayElement();
+
+        if(currentDim > 1) {
+            String startLabel = "_array_for_start_" + suffixToAvoidVariableCollisions + currentArray,
+                    endLabel = "_array_for_end_" + suffixToAvoidVariableCollisions + currentArray;
+
+            // int a = 0;
+            YaplSymbol arrayDimIterator = new YaplSymbol(arrayDimIteratorSymbol, SymbolKind.Variable);
+            this.allocVariable(arrayDimIterator);
+            backend.loadConst(0);
+            backend.storeWord(STACK, arrayDimIterator.getOffset());
+
+            // for(int a=0; a<dim0; a++)
+            // this for is used to calculate how many sub-arrays are needed
+            backend.assignLabel(startLabel);
+
+            // if(a == dims[0]) break;
+            loadArrayValueAtIndex(arrayDimensionArrayAddress, 0);
+            //
+            backend.loadWord(STACK, arrayDimIterator.getOffset());
+            //
+            backend.isNotEqual();
+            //
+            backend.branchIf(false, endLabel);
+
+            // loop body
+
+                // result[0][a] = new int[dim1]
+                // result[0]
+                loadArrayValueAtIndex(resultAddresses, 0);
+                // a
+                backend.loadWord(STACK, arrayDimIterator.getOffset());
+                // load dim1
+                loadArrayValueAtIndex(arrayDimensionArrayAddress, 1);
+                // int[] = new int[dim1]
+                backend.allocArray();
+                //
+                backend.storeArrayElement();
+
+
+            // a++
+            backend.loadWord(STACK, arrayDimIterator.getOffset());
+            backend.loadConst(1);
+            backend.add();
+            backend.storeWord(STACK, arrayDimIterator.getOffset());
+
+            // goto for_start
+            backend.jump(startLabel);
+            backend.assignLabel(endLabel);
+        }
+
+
+        // reset array allocation and raise array-label-index
+        arrayDimensionArrayAddress = null;
+        currentDim = 0;
+
+        currentArray++;
+
+        // load result[0]
+        loadArrayValueAtIndex(resultAddresses, 0);
 
         // address is located on exp stack
         return new YaplAttrib(Attrib.RegAddress, arrayType);
+    }
+
+    private void loadArrayValueAtIndex(YaplSymbol array, int index) {
+        backend.loadWord(STACK, array.getOffset());
+        backend.loadConst(index);
+        backend.loadArrayElement();
     }
 
     @Override
