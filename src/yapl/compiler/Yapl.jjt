@@ -75,13 +75,6 @@ public class Yapl {
         // if no srcPath is provided, read from STDIN
         InputStream input = srcPath != null ? new FileInputStream(srcPath) : System.in;
 
-        try {
-            String arrayLib = Files.readString(Path.of("./src/yapl/compiler/runtimelib.yapl"));
-        }
-        catch(IOException e) {
-            System.out.println("Runtimelib not found.");
-        }
-
         codeGen = new CodeGenBinSM(backend);
 
         Yapl parser = new Yapl(input);
