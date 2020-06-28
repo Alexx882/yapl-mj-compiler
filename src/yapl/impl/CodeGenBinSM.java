@@ -102,7 +102,9 @@ public class CodeGenBinSM implements CodeGen {
             record.getField(i).setOffset(i);
     }
 
-    private final String suffixToAvoidVariableCollisions = "____________________FUCKYOUTASCHWER_________________";
+    // using "#" as a suffix avoids collisions with local variables as "#" is no valid
+    // char in äh YAPL identifiers
+    private final String suffixToAvoidVariableCollisions = "#";
 
     private final int maxArrayDim = 2;
     private final String arrayAddressSymbol = "_array_dim_buffer" + suffixToAvoidVariableCollisions;
@@ -185,7 +187,7 @@ public class CodeGenBinSM implements CodeGen {
         //
         backend.storeArrayElement();
 
-        if(currentDim > 1) {
+        if (currentDim > 1) {
             String startLabel = "_array_for_start_" + suffixToAvoidVariableCollisions + currentArray,
                     endLabel = "_array_for_end_" + suffixToAvoidVariableCollisions + currentArray;
 
@@ -209,7 +211,7 @@ public class CodeGenBinSM implements CodeGen {
             backend.branchIf(false, endLabel);
 
             // loop body
-
+            {
                 // result[0][a] = new int[dim1]
                 // result[0]
                 loadArrayValueAtIndex(resultAddresses, 0);
@@ -221,7 +223,7 @@ public class CodeGenBinSM implements CodeGen {
                 backend.allocArray();
                 //
                 backend.storeArrayElement();
-
+            }
 
             // a++
             backend.loadWord(STACK, arrayDimIterator.getOffset());
