@@ -4,7 +4,7 @@ Group D: Herold, Jakobitsch, Lercher
 ## Implementation Overview
 `yapl.impl.CodeGenBinSM` has been introduced (as suggested by the provided interfaces) 
 as intermediate between the grammar productions in `/src/yapl/compiler/Yapl.jjt`
-and the low-level bytecode generation in `yapl.impl.BackendMJ` (from CA1).  
+and the low-level bytecode generation in `yapl.impl.BackendMJ` (from CA1).
 
 ## Usage
 ```shell
@@ -31,3 +31,4 @@ The ant build file is located at `/build.xml`.
 ### Notes
 We used the provided target `eval-all-codegen` to test our code with the new provided test files,
 as well as `eval-all` for the previous tests.
+Unfortunately, one of the old test files (parser/test13) still does not pass, as it uses an array length operator directly on the return value of a procedure. This is not allowed in the given syntax.
