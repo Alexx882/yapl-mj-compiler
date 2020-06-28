@@ -53,16 +53,17 @@ public class RecordType extends Type {
         if (fields.size() != that.fields.size()) return false;
 
         for (int i = 0; i < fields.size(); i++) {
-            // check if both fields are self reference to prevent falling into infinite loop
-            if (isSelfReference(i) && that.isSelfReference(i))
-                continue;
-
             var thisField = getField(i);
             var thatField = that.getField(i);
 
             // compare field names
             if (!Objects.equals(thisField.getName(), thatField.getName()))
                 return false;
+
+            // check if both fields are self reference to prevent falling into infinite loop
+            if (isSelfReference(i) && that.isSelfReference(i))
+                continue;
+
             // compare field types
             if (!Objects.equals(thisField.getType(), thatField.getType()))
                 return false;
@@ -71,6 +72,18 @@ public class RecordType extends Type {
         return true;
     }
 
+    /**
+     * Checks if field #i is a self reference.
+     *
+     * Example:
+     *
+     * Record List
+     *     int item;
+     *     List next;
+     * EndRecord;
+     *
+     * the field "next" (index 1) is a self reference.
+     */
     private boolean isSelfReference(int i) {
         return this == getFieldType(i);
     }

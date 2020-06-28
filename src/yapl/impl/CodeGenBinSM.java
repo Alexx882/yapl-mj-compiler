@@ -556,6 +556,9 @@ public class CodeGenBinSM implements CodeGen {
 
     @Override
     public void writeString(String string) throws YaplException {
+        if (string.charAt(0) != '"' || string.charAt(string.length() - 1) != '"')
+            throw new YaplException(Internal, -1, -1, "Strings need to be quoted (double quotes). For unquoted strings, use writeStringNoQuotes(String).");
+
         // strip quotes
         writeStringNoQuotes(string.substring(1, string.length() - 1));
     }

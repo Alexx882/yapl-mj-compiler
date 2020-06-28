@@ -1,7 +1,5 @@
 package yapl.lib;
 
-import yapl.impl.Procedure;
-
 public class Type {
 
     public static final Type INT = new Type();
