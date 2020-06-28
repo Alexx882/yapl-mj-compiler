@@ -317,8 +317,6 @@ public class CodeGenBinSM implements CodeGen {
                 backend.storeWord(HEAP, lvalue.getOffset());
                 break;
 
-            // TODO assignments for array elements, record fields
-
             default:
                 throw new YaplException(Internal, -1, -1, "Assignment for kind " + lvalue.getKind() + " implemented yet");
         }
@@ -539,12 +537,9 @@ public class CodeGenBinSM implements CodeGen {
                 break;
 
             case readint:
-                // TODO check: shouldnt we use real impl eventually
-                // option 1: mock behavior for testing purposes
-                backend.loadConst(0);
-
-                // option 2: real implementation
-//                ((BackendMJ) backend).readInteger();
+                // this seems not to be required by the test cases or the BackendBinSM interface.
+                // but since it is not used in any codegen test cases, it will not break automated tests.
+                backend.readInteger();
                 break;
 
             default:

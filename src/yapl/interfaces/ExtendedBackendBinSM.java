@@ -14,4 +14,9 @@ public interface ExtendedBackendBinSM extends BackendBinSM {
      */
     void not();
 
+    /**
+     * Reads an integer from stdin.
+     */
+    void readInteger();
+
 }
