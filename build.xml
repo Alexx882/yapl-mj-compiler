@@ -17,7 +17,6 @@
         debug       - enables the debug parser JavaCC option
     </description>
 
-    <!-- todo description for properties -->
     <property name="src" location="src"/>
     <property name="build" location="ant-bin"/>
     <property name="javacc" location="lib"/>

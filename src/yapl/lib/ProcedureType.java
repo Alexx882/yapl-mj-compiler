@@ -43,7 +43,7 @@ public class ProcedureType extends Type {
 
         ProcedureType that = (ProcedureType) o;
 
-        //if (!Objects.equals(name, that.name)) return false;
+        if (!Objects.equals(name, that.name)) return false;
         if (!Objects.equals(returnType, that.returnType)) return false;
 
         var thisIter = parameters.entrySet().iterator();

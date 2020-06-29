@@ -9,11 +9,6 @@ public class Type {
     Type() {
     }
 
-    @Override
-    public boolean equals(Object o) {
-        return super.equals(o);
-    }
-
     public boolean isInt() {
         return this == INT;
     }

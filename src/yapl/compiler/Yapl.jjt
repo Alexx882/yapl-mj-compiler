@@ -484,7 +484,6 @@ Attrib ProcedureCall() throws YaplException :
             throw new YaplException(Internal, tName, "procedure symbol is not procedure");
 
         ProcedureType procType = (ProcedureType) type;
-        Type returnType = procType.getReturnType();
     }
     <L_BRACKET> [ argList=ArgumentList() ] tBracket=<R_BRACKET>
     {

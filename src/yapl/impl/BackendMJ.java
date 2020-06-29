@@ -291,7 +291,7 @@ public class BackendMJ implements ExtendedBackendBinSM {
 
     @Override
     public void storeArrayDim(int dim) {
-        // todo implement
+        throw new UnsupportedOperationException("Only 1/2d arrays are supported.");
     }
 
     @Override

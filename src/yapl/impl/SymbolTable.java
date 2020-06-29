@@ -23,7 +23,6 @@ public class SymbolTable implements Symboltable {
     @Override
     public void openScope(boolean isGlobal) {
         if (isGlobal)
-            // todo check
             throw new IllegalStateException("No more global scopes allowed");
 
         scopes.push(new Scope(isGlobal));
